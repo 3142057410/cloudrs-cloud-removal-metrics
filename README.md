@@ -267,8 +267,11 @@ If you use this package, please cite the manuscript above and the archived versi
 ```
 
 The archived package (all versions) is at https://doi.org/10.5281/zenodo.24070784
-(Concept DOI); the snapshot described in the manuscript is v1.0.0,
-https://doi.org/10.5281/zenodo.24070785.
+(Concept DOI, always resolving to the latest version). Version DOIs:
+v1.0.0 https://doi.org/10.5281/zenodo.24070785,
+v1.1.0 https://doi.org/10.5281/zenodo.24071316,
+v1.2.0 https://doi.org/10.5281/zenodo.24071597 (first version containing the
+revision analyses of Sections 4.1 and 4.2).
 
 Corresponding author: Dawei Liu (wjmicheal@163.com),
 Engineering University of the Chinese People's Armed Police Force, Xi'an, Shaanxi, China.
