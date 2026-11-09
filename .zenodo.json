@@ -1,0 +1,42 @@
+{
+  "title": "Reproducibility package for: From image fidelity to product quality: image-domain metrics misrank cloud-removal models for Sentinel-2 LAI, Cab and NDVI retrieval",
+  "description": "<p>Code, derived patch-level tables, figures and metadata for the manuscript <em>From image fidelity to product quality: image-domain metrics misrank cloud-removal models for Sentinel-2 LAI, Cab and NDVI retrieval</em>.</p><p>47 processing and evaluation scripts, 46 derived CSV tables, 10 figures and patch geolocation metadata. Input imagery is not redistributed: SEN12MS-CR, Sentinel-2 L2A (Copernicus Data Space Ecosystem) and MCD15A3H (NASA LP DAAC) are public. The README gives the commands that rebuild every intermediate.</p><p><strong>Licensing.</strong> The record as a whole is released under CC BY 4.0. The code in <code>code/</code> is additionally released under the MIT License, as stated in the repository LICENSE file; the derived tables in <code>tables/</code> and the figures in <code>figures/</code> are released under CC BY 4.0.</p>",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": "cc-by-4.0",
+  "creators": [
+    {
+      "name": "Ma, Zhaoyang",
+      "affiliation": "Engineering University of the Chinese People's Armed Police Force",
+      "orcid": "0009-0007-8875-3515"
+    },
+    {
+      "name": "Liu, Dawei",
+      "affiliation": "Engineering University of the Chinese People's Armed Police Force",
+      "orcid": "0000-0003-2471-4713"
+    },
+    {
+      "name": "Yang, Jinghan",
+      "affiliation": "Engineering University of the Chinese People's Armed Police Force",
+      "orcid": "0009-0007-0198-4098"
+    }
+  ],
+  "keywords": [
+    "cloud removal",
+    "Sentinel-2",
+    "leaf area index",
+    "PROSAIL",
+    "image quality metrics",
+    "downstream task evaluation",
+    "SEN12MS-CR",
+    "reproducibility"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/3142057410/cloudrs-cloud-removal-metrics",
+      "relation": "isSupplementTo",
+      "scheme": "url",
+      "resource_type": "software"
+    }
+  ]
+}
