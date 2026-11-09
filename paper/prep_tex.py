@@ -10,6 +10,10 @@ AUX = str(HERE / "main.aux")
 OUT_TEX = str(HERE / "word.tex")
 OUT_DOCX = str(HERE / "Elsevier_JAG_Manuscript.docx")
 
+if not (HERE / "main.aux").exists():
+    raise SystemExit(
+        "main.aux is missing: run `pdflatex main.tex` twice in paper/ first "
+        "(the build needs the label numbers from the .aux file).")
 src = io.open(SRC, encoding="utf-8").read()
 aux = io.open(AUX, encoding="utf-8").read()
 
