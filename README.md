@@ -271,7 +271,10 @@ The archived package (all versions) is at https://doi.org/10.5281/zenodo.2407078
 v1.0.0 https://doi.org/10.5281/zenodo.24070785,
 v1.1.0 https://doi.org/10.5281/zenodo.24071316,
 v1.2.0 https://doi.org/10.5281/zenodo.24071597 (first version containing the
-revision analyses of Sections 4.1 and 4.2).
+revision analyses of Sections 4.1 and 4.2),
+v1.3.0 https://doi.org/10.5281/zenodo.24074614 (matches the manuscript as
+submitted: `paper/main.tex` carries the AI-use declaration, and the
+pre-correction duplicates under `tables/main/` are gone).
 
 Corresponding author: Dawei Liu (wjmicheal@163.com),
 Engineering University of the Chinese People's Armed Police Force, Xi'an, Shaanxi, China.
