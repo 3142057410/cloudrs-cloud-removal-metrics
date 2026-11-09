@@ -323,9 +323,8 @@ for text, is_head in ((head_text, True), (body_text, False)):
         fmt(para, size=12, align=WD_ALIGN_PARAGRAPH.JUSTIFY, before=0, after=12, spacing=2.0)
 
 # ---------------------------------------------------------------- properties
-doc.core_properties.title = ("From image fidelity to product quality: image-domain "
-                             "metrics misrank cloud-removal models for Sentinel-2 LAI, "
-                             "Cab and NDVI retrieval")
+doc.core_properties.title = ("Image-domain metrics misrank cloud-removal models "
+                             "for Sentinel-2 LAI, Cab and NDVI retrieval")
 doc.core_properties.author = "Zhaoyang Ma; Dawei Liu; Jinghan Yang"
 doc.core_properties.subject = ("International Journal of Applied Earth Observation "
                                "and Geoinformation")

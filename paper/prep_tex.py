@@ -171,8 +171,8 @@ for k, txt in entries:
     refs.append("[%d] %s" % (keymap[k], txt))
 print("refs built:", len(refs))
 
-TITLE = ("From image fidelity to product quality: image-domain metrics misrank "
-         "cloud-removal models for Sentinel-2 LAI, Cab and NDVI retrieval")
+TITLE = ("Image-domain metrics misrank cloud-removal models for Sentinel-2 LAI, "
+         "Cab and NDVI retrieval")
 
 front = []
 front.append("@@TITLE@@ " + TITLE)

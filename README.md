@@ -1,9 +1,9 @@
-# Image fidelity vs. product quality: reproducibility package
+# Image-domain metrics misrank cloud-removal models: reproducibility package
 
 Code, derived tables and figures for the manuscript
 
-> **From image fidelity to product quality: image-domain metrics misrank cloud-removal
-> models for Sentinel-2 LAI, Cab and NDVI retrieval**
+> **Image-domain metrics misrank cloud-removal models for Sentinel-2 LAI, Cab and
+> NDVI retrieval**
 > submitted to *International Journal of Applied Earth Observation and Geoinformation*
 
 The study asks whether the four metrics normally used to accept a cloud-removal model
@@ -236,10 +236,10 @@ under CC BY 4.0.
 If you use this package, please cite the manuscript above and the archived version:
 
 ```bibtex
-@article{ma2026imagefidelity,
+@article{ma2026imagemetrics,
   author  = {Ma, Zhaoyang and Liu, Dawei and Yang, Jinghan},
-  title   = {From image fidelity to product quality: image-domain metrics misrank
-             cloud-removal models for {Sentinel-2} {LAI}, {Cab} and {NDVI} retrieval},
+  title   = {Image-domain metrics misrank cloud-removal models for {Sentinel-2}
+             {LAI}, {Cab} and {NDVI} retrieval},
   journal = {International Journal of Applied Earth Observation and Geoinformation},
   year    = {2026},
   note    = {Code and derived tables: https://doi.org/10.5281/zenodo.24070784}
