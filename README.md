@@ -246,5 +246,5 @@ If you use this package, please cite the manuscript above and the archived versi
 }
 ```
 
-Corresponding author: Dawei Liu (wjmicheal@163.com), School of Information Engineering,
+Corresponding author: Dawei Liu (wjmicheal@163.com),
 Engineering University of the Chinese People's Armed Police Force, Xi'an, Shaanxi, China.
