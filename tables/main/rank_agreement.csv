@@ -1,0 +1,16 @@
+method,rank_dLAI,rank_dCab,shift
+hist_match,13.0,6.0,7.0
+blur_fill,6.0,10.0,4.0
+knn_spatial,8.0,12.0,4.0
+dsen2cr_opt,4.0,2.0,2.0
+mean_fill,11.0,9.0,2.0
+diffusion,14.0,15.0,1.0
+dsen2cr_sar,3.0,4.0,1.0
+inpaint_telea,10.0,11.0,1.0
+nearest_fill,12.0,13.0,1.0
+sar_regression,9.0,8.0,1.0
+unet_sar,2.0,3.0,1.0
+zero_fill,15.0,14.0,1.0
+sar_guided,7.0,7.0,0.0
+uncrtaints_ft,1.0,1.0,0.0
+unet_opt,5.0,5.0,0.0

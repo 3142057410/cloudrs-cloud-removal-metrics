@@ -1,0 +1,13 @@
+season,metric,spearman,p_value,n
+spring,PSNR,-0.8265,0.0,3690
+spring,SSIM,-0.6338,0.0,3690
+spring,SAM,0.8037,0.0,3690
+spring,ERGAS,0.726,0.0,3690
+spring,MAE,0.7997,0.0,3690
+spring,RMSE,0.8265,0.0,3690
+winter,PSNR,-0.5755,0.0,2730
+winter,SSIM,-0.2735,0.0,2730
+winter,SAM,0.3312,0.0,2730
+winter,ERGAS,0.2351,0.0,2730
+winter,MAE,0.4923,0.0,2730
+winter,RMSE,0.5755,0.0,2730

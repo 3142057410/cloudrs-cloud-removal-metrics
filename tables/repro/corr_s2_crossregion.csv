@@ -1,0 +1,9 @@
+scope,n_methods,metric,target,rho
+all,9,PSNR,dLAI_mean,-0.9167
+all,9,PSNR,dCab_mean,0.2333
+all,9,SAM,dLAI_mean,0.65
+all,9,SAM,dCab_mean,0.05
+all,9,SSIM,dLAI_mean,-0.9
+all,9,SSIM,dCab_mean,0.1667
+all,9,ERGAS,dLAI_mean,0.6833
+all,9,ERGAS,dCab_mean,-0.0667

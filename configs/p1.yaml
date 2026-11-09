@@ -1,0 +1,65 @@
+# P1 实验配置：去云评价指标与下游反演精度的一致性研究
+# 所有参数集中在此，代码中禁止硬编码 —— 换卡后只改 patch_size / base_channels / ddim_steps
+
+project: P1_metric_consistency
+
+data:
+  # 原始 parquet 所在目录（hf-mirror 上的 SEN12MS-CR 镜像）
+  raw_dir: data/raw/test
+  # 处理后的 npz 缓存目录
+  cache_dir: data/processed
+  patch_size: 128          # 低配版；标准版改 256
+  max_patches: 1500        # 测试集上限（两个分片约 1560 个，全用）
+  band_mode: all           # all = 全部 13 波段（下游反演需要红边 B5/B6/B7）
+  scale: 10000.0           # DN -> 反射率的除数（已实测确认：int16，值域 4~8079）
+  cloud_threshold: 0.15    # 实测标定：精度 1.000 / 召回 0.897（见 dataset.make_cloud_mask 注释）
+
+split:
+  # 固定划分，写入 split.json 后永不修改
+  val_ratio: 0.15
+  test_ratio: 0.35
+  seed: 42
+
+methods:
+  # 无需训练的基线（9 个，误差特性各不相同：结构修复/统计/回归/平滑）
+  - zero_fill
+  - mean_fill
+  - nearest_fill
+  - blur_fill
+  - sar_guided
+  - inpaint_telea
+  - sar_regression
+  - knn_spatial
+  - hist_match
+  # 学习方法族（由 src/train_unet.py 训练，权重在 models/*.pt）
+  # 补这一族的目的：前 9 个都是"非学习型局部统计/插值"，若只测这一族，
+  # "指标与下游不一致"可能只是该族的特性，无法支撑论文结论。
+  - unet_opt
+  - unet_sar
+  - dsen2cr_opt
+  - dsen2cr_sar
+  # 生成族（src/train_diffusion.py，2.55M / 20k 步，DDIM 20 步采样）
+  # 规模远小于文献里的扩散去云，指标偏弱属预期内；作用是把这一族纳入评测
+  - diffusion
+
+metrics:
+  data_range: 1.0
+  bands: usable            # usable = 排除 B1/B9/B10 三个大气波段（B10 均值仅 0.0008，会把 ERGAS 拉爆）
+  mask_mode: cloud         # cloud = 只在云区统计；all = 全图
+
+downstream:
+  # 下游反演器：PROSAIL 查找表反演 LAI
+  lut_path: data/processed/prosail_lut.npz
+  lut_samples: 200000      # 分块生成，避免一次性占满内存
+  lut_chunk: 20000
+  bands: [B2, B3, B4, B8]  # 与 band_mode 对应
+  target: LAI
+
+analysis:
+  bootstrap_n: 1000
+  stratify_by: [cloud_fraction, season]   # 分层维度
+
+output:
+  tables: results/tables
+  figures: results/figures
+  logs: results/logs

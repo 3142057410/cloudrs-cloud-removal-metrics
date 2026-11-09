@@ -1,0 +1,41 @@
+# ---- locally generated data (see README, "What is not included") ----
+data/
+results/
+results_meta/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# ---- large binaries ----
+*.npz
+*.npy
+*.pt
+*.pth
+*.ckpt
+*.tif
+*.tiff
+*.jp2
+*.SAFE/
+*.zip
+
+# ---- manuscript build artefacts ----
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+preview.pdf
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,10 @@
+method,n_site,bias,rmse
+zero_fill,6,-1.1132,1.3959
+mean_fill,6,-0.5704,0.8705
+nearest_fill,6,-0.567,0.8886
+blur_fill,6,-0.5738,0.8765
+inpaint_telea,6,-0.5967,0.91
+knn_spatial,6,-0.5726,0.8886
+hist_match,6,-0.5559,0.8516
+unet_opt,6,0.437,0.7501
+dsen2cr_opt,6,-0.3259,0.5776

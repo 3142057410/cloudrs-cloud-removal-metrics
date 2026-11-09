@@ -1,0 +1,7 @@
+set,k,methods,PSNR_vs_LAI,PSNR_vs_Cab,SAM_vs_LAI,SAM_vs_Cab,SSIM_vs_LAI,SSIM_vs_Cab,ERGAS_vs_LAI,ERGAS_vs_Cab,MAE_vs_LAI,MAE_vs_Cab,RMSE_vs_LAI,RMSE_vs_Cab
+主 SEN12MS-CR Top4,4,"uncrtaints_ft,unet_sar,dsen2cr_opt,dsen2cr_sar",-0.8,-0.8,0.8,0.8,-0.8,-0.8,0.8,0.8,1.0,0.4,0.8,0.2
+新 S2-L2A Top4,4,"mean_fill,blur_fill,hist_match,knn_spatial",-0.8,-1.0,1.0,0.8,-0.8,-1.0,0.8,1.0,0.8,1.0,0.8,1.0
+主 SEN12MS-CR Top5,5,"uncrtaints_ft,unet_sar,dsen2cr_opt,dsen2cr_sar,unet_opt",-0.9,-0.9,0.9,0.9,-0.7,-0.8,0.9,0.9,1.0,0.7,0.9,0.6
+新 S2-L2A Top5,5,"mean_fill,blur_fill,hist_match,knn_spatial,inpaint_telea",-0.8,-1.0,0.9,0.9,-0.9,-0.9,0.8,1.0,0.8,1.0,0.8,1.0
+主 SEN12MS-CR Top6,6,"uncrtaints_ft,unet_sar,dsen2cr_opt,dsen2cr_sar,unet_opt,sar_regression",-0.9429,-0.9429,0.9429,0.9429,-0.8286,-0.8857,0.9429,0.9429,1.0,0.8286,0.9429,0.7714
+新 S2-L2A Top6,6,"mean_fill,blur_fill,hist_match,knn_spatial,inpaint_telea,nearest_fill",-0.8857,-1.0,0.9429,0.9429,-0.9429,-0.9429,0.8857,1.0,0.8857,1.0,0.8857,1.0

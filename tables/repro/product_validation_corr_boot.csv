@@ -1,0 +1,17 @@
+metric,target,rho,ci_lo,ci_hi,ci_excludes_zero,n_boot
+PSNR,rmse_cld,-0.9333,-0.9667,-0.75,True,1000
+PSNR,rmse_all_db,-0.8667,-0.9667,-0.7167,True,1000
+PSNR,r2,0.9333,0.7996,0.9667,True,1000
+PSNR,break_med,-0.8333,-0.9333,-0.0829,True,1000
+SSIM,rmse_cld,-0.8667,-0.9333,-0.7167,True,1000
+SSIM,rmse_all_db,-0.7667,-0.95,-0.6825,True,1000
+SSIM,r2,0.8667,0.6996,0.9333,True,1000
+SSIM,break_med,-0.75,-0.9167,-0.05,True,1000
+SAM,rmse_cld,0.5667,0.4,0.6167,True,1000
+SAM,rmse_all_db,0.4333,0.3162,0.6167,True,1000
+SAM,r2,-0.5667,-0.6167,-0.4,True,1000
+SAM,break_med,0.3667,-0.2337,0.5833,False,1000
+ERGAS,rmse_cld,0.8167,0.6663,0.8667,True,1000
+ERGAS,rmse_all_db,0.75,0.6329,0.8833,True,1000
+ERGAS,r2,-0.8167,-0.8667,-0.65,True,1000
+ERGAS,break_med,0.7167,0.1496,0.8833,True,1000

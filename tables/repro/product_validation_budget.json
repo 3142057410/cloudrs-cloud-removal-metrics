@@ -1,0 +1,10 @@
+{
+ "global_bias_c0": -0.39938557147979736,
+ "inter_method_rmse_spread": 1.475819705126919,
+ "ratio_spread_over_sigma": 3.932720727223752,
+ "interpretation": "信号大于参照噪声，方法间排序可信",
+ "sigma_ref_mean": 0.3753,
+ "sigma_ref_median_patch": 0.2708,
+ "sigma_ref_p90_patch": 0.7,
+ "ratio_using_median": 5.45
+}

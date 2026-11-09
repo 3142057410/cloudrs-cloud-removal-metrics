@@ -1,0 +1,13 @@
+variant,scope,n_methods,metric,rho
+erode1,all,15,PSNR,-0.9429
+erode1,all,15,SAM,0.9429
+erode1,highq,9,PSNR,-0.8833
+erode1,highq,9,SAM,0.9333
+orig,all,15,PSNR,-0.9357
+orig,all,15,SAM,0.925
+orig,highq,9,PSNR,-0.8667
+orig,highq,9,SAM,0.9333
+dilate1,all,15,PSNR,-0.9393
+dilate1,all,15,SAM,0.9321
+dilate1,highq,9,PSNR,-0.8833
+dilate1,highq,9,SAM,0.9333

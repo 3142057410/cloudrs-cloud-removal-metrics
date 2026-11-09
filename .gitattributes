@@ -1,0 +1,9 @@
+# Normalise line endings so the archive is identical on every platform.
+* text=auto eol=lf
+
+# Binary assets must never be converted.
+*.png binary
+*.jpg binary
+*.pdf binary
+*.docx binary
+*.xlsx binary
