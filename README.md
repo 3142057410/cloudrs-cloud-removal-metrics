@@ -242,9 +242,13 @@ If you use this package, please cite the manuscript above and the archived versi
              cloud-removal models for {Sentinel-2} {LAI}, {Cab} and {NDVI} retrieval},
   journal = {International Journal of Applied Earth Observation and Geoinformation},
   year    = {2026},
-  note    = {Code and derived tables: https://doi.org/10.5281/zenodo.XXXXXXX}
+  note    = {Code and derived tables: https://doi.org/10.5281/zenodo.24070784}
 }
 ```
+
+The archived package (all versions) is at https://doi.org/10.5281/zenodo.24070784
+(Concept DOI); the snapshot described in the manuscript is v1.0.0,
+https://doi.org/10.5281/zenodo.24070785.
 
 Corresponding author: Dawei Liu (wjmicheal@163.com),
 Engineering University of the Chinese People's Armed Police Force, Xi'an, Shaanxi, China.
