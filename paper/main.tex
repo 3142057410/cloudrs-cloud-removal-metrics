@@ -1,0 +1,792 @@
+%% ---------------------------------------------------------------------------
+%% Target journal: International Journal of Applied Earth Observation and
+%% Geoinformation (IJAEOG, Elsevier).  Class: cas-dc (Elsevier CAS bundle,
+%% double column).  Compile with pdfLaTeX, two passes.
+%%
+%% Converted from the IEEEtran (JSTARS) version and repositioned for the IJAEOG
+%% scope: the paper is framed as a quality-assurance problem for the cloud-removal
+%% step of a biophysical product chain rather than as a survey of metric
+%% consistency. Experiments, numbers and conclusions are unchanged. Hard-coded
+%% 'Table I'/'Figure 1' references now use \ref so that they follow Elsevier
+%% numbering (Table 1, Fig. 1).
+%% ---------------------------------------------------------------------------
+\documentclass[a4paper,fleqn]{cas-dc}
+
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{textcomp}
+\usepackage{url}
+
+\hyphenation{Geo-phys Sur-veys}
+\setlength{\emergencystretch}{1.5em}
+
+\begin{document}
+\let\WriteBookmarks\relax
+\def\floatpagepagefraction{1}
+\def\textpagefraction{.001}
+
+\shorttitle{Image Metrics Misrank Cloud-Removal Models}
+\shortauthors{Ma et al.}
+
+\title[mode=title]{Image-domain metrics misrank cloud-removal models for Sentinel-2 LAI, Cab and NDVI retrieval}
+
+\author[1]{Zhaoyang Ma}[orcid=0009-0007-8875-3515]
+\ead{3142057410@qq.com}
+\credit{Methodology, Software, Validation, Formal analysis, Writing -- original draft, Visualization}
+
+\author[1]{Dawei Liu}[orcid=0000-0003-2471-4713]
+\cormark[1]
+\ead{wjmicheal@163.com}
+\credit{Conceptualization, Writing -- review \& editing, Supervision}
+
+\author[1]{Jinghan Yang}[orcid=0009-0007-0198-4098]
+\ead{19031816221@163.com}
+\credit{Investigation, Data curation, Validation}
+
+\affiliation[1]{organization={Engineering University of the Chinese People's Armed Police Force},
+            city={Xi'an},
+            state={Shaanxi},
+            country={China}}
+
+\cortext[1]{Corresponding author.}
+
+\begin{abstract}
+Cloud-removed Sentinel-2 reflectance is an input to operational leaf area index (LAI), canopy chlorophyll (Cab) and NDVI products, yet it is accepted almost entirely on image-domain metrics---peak signal-to-noise ratio (PSNR), structural similarity (SSIM), spectral angle metric (SAM) and relative dimensionless global error in synthesis (ERGAS)---assuming pixel fidelity proxies quality. We test 15 methods from non-learning, learning and generative families over 428 cloudy patches, two datasets and three targets (LAI, Cab, NDVI). SSIM and ERGAS are the weakest: at patch level, SAM tracks retrieval error more closely, by 0.162 and 0.152 (95\% CI [0.120, 0.208] and [0.126, 0.175]), a gap robust to masks, seeds and tasks. PSNR and SAM are inseparable, and their order depends on the pool and target: PSNR leads over all 15 methods (0.936 vs. 0.925) and at patch level (0.756 vs. 0.726), yet SAM overtakes it among the nine qualified methods (0.933 vs. 0.867) and leads by 0.16 for NDVI; PSNR screens out poor methods rather than ranking good ones. The decoupling is spectral: B8A/B8/B7 contribute 60\% of the global MSE while retrieval is governed by B11, 4.1$\times$ more sensitive than B8, and the two profiles correlate at r = +0.06. Discrimination degrades under cirrus (SAM 0.779$\rightarrow$0.490). Against an operational MODIS LAI product the order moves again: SAM falls to 0.567 while PSNR reaches 0.933, and the top-PSNR method has 32\% more product error than one two places below it. We restate these findings as acceptance criteria for the cloud-removal step of a product chain.
+\end{abstract}
+
+%% Research highlights are required by the journal as a SEPARATE editable file
+%% (see highlights.txt). They are kept here, commented out, only as a record.
+%\begin{highlights}
+%\item ...
+%\end{highlights}
+
+\begin{keywords}
+Cloud removal \sep biophysical parameter retrieval \sep leaf area index \sep
+NDVI classification \sep product validation \sep Sentinel-2
+\end{keywords}
+
+\maketitle
+
+\section{Introduction}
+
+\subsection{An Untested Assumption Behind Cloud-Removal Acceptance}
+
+Sentinel-2 Level-2A surface reflectance is the working input of operational biophysical products: leaf area index (LAI), canopy chlorophyll content (Cab) and NDVI composites that feed cropland, forest and grassland monitoring. None of these products can be generated where clouds obscure the surface, so cloud removal is not an optional refinement but a routine step of the preprocessing chain, and the quality of the reconstruction propagates directly into the parameter finally delivered to a user.
+
+That step is nevertheless accepted on image-domain evidence. Cloud removal has grown in a few years from a handful of prototype algorithms into a highly competitive field, and dozens of architectures are now ranked in a single table on SEN12MS-CR, AllClear and their derivatives. The ranking is almost always read from image-domain metrics: mostly the peak signal-to-noise ratio (PSNR) and structural similarity (SSIM), sometimes the spectral angle metric (SAM) and the relative dimensionless global error in synthesis (ERGAS). The reasoning chain is short and rarely stated explicitly: higher pixel fidelity means a better reconstruction, and a better reconstruction means a more usable product.
+
+Cloud occlusion of optical observations is systematic. Roughly half of spaceborne optical observations are affected by clouds or haze \cite{ref1}. This makes cloud removal an unavoidable step in the preprocessing chain for land-surface monitoring. After deep learning entered remote sensing in the last decade, the task moved quickly from hand-crafted operators to end-to-end networks \cite{ref2}. Yet the transfer from pixel fidelity to product quality has not been tested on the terms a product actually imposes. Downstream models consume per-pixel spectra, and a spectrum can fail in ways that image metrics cannot see. A single band may carry a systematic offset. The texture may look plausible while the content is fabricated. Or the error may be small yet concentrate exactly on the few bands the target parameter depends on. This paper therefore asks a practical question. When a product team selects the top-ranked model from such a table, does it obtain the model that yields the most reliable LAI, Cab and NDVI estimates?
+
+This skepticism is not new. Whether signal fidelity equals perceptual quality has been debated in image processing for over two decades \cite{ref3,ref4}. In remote sensing image fusion, whether metrics can represent product usability has likewise long been unresolved, and the lack of an evaluation standard is itself a core issue repeatedly discussed in the field \cite{ref5,ref6}.
+
+\subsection{Open Problems}
+
+Evidence that the answer may be negative is accumulating. Generative models have been observed to perform well on perceptual metrics while fabricating objects beneath clouds \cite{ref7,ref8}. The spectral angle metric was proposed precisely because PSNR ignores spectral shape \cite{ref9}. Several recent benchmarks also report that rankings change with the chosen metric \cite{ref10,ref11}. Yet three problems remain unresolved. First, most of these observations compare strong methods against deliberately weak baselines, so the inconsistency could be an artifact of an overly easy candidate pool. Second, results are usually reported under a single aggregation scheme---per patch or per method---and the two answer different questions that need not agree. Third, no study has localized the root of the failure. The claim that image metrics and retrieval models weight bands differently has been asserted repeatedly, but band-level evidence is never given.
+
+\subsection{This Work and Contributions}
+
+This paper evaluates 15 cloud-removal methods (nine non-learning statistical or interpolation operators, five learned models, and one conditional diffusion model). The data come from 428 cloudy image patches in SEN12MS-CR, for 6,420 method--patch evaluations in total. The core analysis is reproduced on an independently built Sentinel-2 L2A dataset over northern China. Downstream usability is measured through a deterministic retrieval pipeline of the kind used to generate LAI and Cab products---PROSAIL lookup tables with 8-nearest-neighbor retrieval (LAI, Cab), plus NDVI threshold classification---and, for LAI, is additionally checked end to end against an operational MODIS product (Section~\ref{sec:prodval}). We study whether, on a fixed candidate pool, metric rankings agree with the accuracy of continuous parameter retrieval, and from which bands the disagreement originates. The paper makes five main contributions.
+
+(1) Three-scheme audit and three-task cross-check. Under three aggregation schemes---method level, patch level, and a restricted candidate pool---and cross-validated across tasks with distinct mechanisms (continuous parameter retrieval and discrete classification), we show that the choice of the best evaluation metric depends strongly on the aggregation scheme, the candidate pool, and the downstream task type.
+
+(2) Band-level mechanism. We decompose the global mean squared error into individual spectral bands and independently estimate each band's sensitivity for retrieval. The correlation between the error-contribution profile and the retrieval-sensitivity profile is only 0.06; the two are almost unrelated. This quantitatively explains, from the spectral dimension, why pixel-fidelity metrics and downstream-task accuracy decouple.
+
+(3) Quantifying the conditional dependence of metric evaluation on scene conditions. In cirrus scenes identified by the B10 cirrus band, the rank correlation of every metric nearly halves. Based on this conditional dependence, we distill a directly deployable evaluation guideline for reviewing cloud-removal papers and accepting remote sensing product quality.
+
+
+(4) Acceptance criteria for a product chain. The three findings are restated as criteria for accepting the cloud-removal step of a biophysical product: which metrics may be used to accept a model, what must be reported alongside them, and how both change with the target parameter and the cloud regime (Table~\ref{tab:13}).
+
+(5) End-to-end validation against an operational product. For LAI, the audit is closed against MODIS MCD15A3H rather than a simulated reference. On 156 patches the best image-domain method is not the best product method: the model with the highest PSNR has a product error 32\% larger than that of a learned model that ranks third by PSNR, and the rank correlation of SAM with product error falls from 0.933 to 0.567 while that of PSNR rises from 0.867 to 0.933. The ordering between metrics, not only the value of each, is therefore a property of the target.
+\section{Related Work}
+
+\subsection{Cloud-Removal Methods and Evaluation Practice}
+
+Cloud-removal methods have evolved along three main lines. The first is statistical and interpolation methods, which fill cloudy regions with neighborhood or multi-temporal information. They are simple and require no training, remain effective on thin clouds and small missing areas, but cannot recover structural detail. The second is supervised methods based on convolutional networks. The SEN12MS series \cite{ref12,ref1} made these methods mainstream. SEN12MS-CR provides supervision by registering cloud-free images of the same region, and DSen2-CR introduces residual structures with long skip connections \cite{ref13}. The third is generative methods, including GANs and diffusion models. Their strength is synthesizing texture; their risk is fabricating objects that do not exist beneath clouds \cite{ref14,ref15,ref16,ref7,ref8}.
+
+In the last three years this line has further diversified. For thick clouds, multi-scale multi-branch structures \cite{ref17} and global--local temporal features \cite{ref18} have appeared. SAR-guided conditional diffusion and dual-branch diffusion are used for the same problem \cite{ref7,ref19,ref8}. Multi-temporal sequence reconstruction treats missing pixels as temporal interpolation \cite{ref20}. Unpaired settings and style adaptation further relax training-data requirements \cite{ref15}. Generative fusion of optical and SAR data is applied in high-resolution scenes \cite{ref21}. These works together push PSNR higher. Yet, as we verify later, a higher PSNR is not equivalent to higher retrieval usability.
+
+Regardless of family, evaluation almost always stays in the image domain. PSNR and SSIM are the most common; SAM and ERGAS come next. The rationale rests on an implicit assumption: image quality is monotonically related to downstream application quality. Some work has begun to question this. One study notes that reconstructions with excellent perceptual metrics may still suffer severe spectral distortion and thus argues for spectral angle metrics \cite{ref9}. Benchmark studies also point out that algorithm rankings change with the selected metric \cite{ref10,ref11}. Yet most of this work stops at ``finding inconsistency.'' It neither controls the candidate-pool composition nor explains the source of the inconsistency.
+
+\subsection{Downstream-Task-Oriented Evaluation}
+
+Another line of thought derives evaluation metrics from downstream tasks. In vegetation remote sensing, LAI and Cab retrieval are sensitive to different band ranges. LAI relies mainly on the red edge and shortwave infrared; Cab relies mainly on blue and red absorption in the visible range \cite{ref22,ref23,ref24}. This difference means that, even for the same reconstructed image, band errors can affect the two tasks in completely different ways. Building on this insight, we turn the evaluation problem from comparing metrics with each other into testing the consistency between metrics and tasks.
+
+\section{Data and Experimental Setup}
+
+\subsection{Datasets}\label{sec:data}
+
+The main dataset comes from SEN12MS-CR \cite{ref1}. We select two scenes, spring and winter, and generate image patches by center cropping at 128$\times$128 pixels and 10 m resolution rather than by scaling. The ten usable bands are not all native 10 m: B5, B6, B7, B8A, B11 and B12 are acquired at 20 m and are reprojected onto the 10 m grid by bilinear interpolation, whereas the SCL mask uses nearest-neighbor resampling so that no class label is invented. Bilinear interpolation smooths the high-frequency contrast of those six bands identically for every method, so it does not bias the comparison, but no alternative kernel was tested (Section~\ref{sec:limits}). Scaling is equivalent to applying the same low-pass filter to all methods, which would systematically compress the between-method differences this paper aims to measure. Patches whose cloud fraction falls outside [2\%, 95\%] are removed. The reproduction dataset is independently built from Copernicus Data Space. It consists of four Sentinel-2 L2A tiles over northern China (2022), paired into eight groups of cloudy scene + clear scene with a 1--4-day temporal gap, yielding 156 image patches. Cloud masks come from the official scene classification layer (SCL) rather than a threshold method, because the choice of the cloud detection algorithm itself significantly affects mask completeness and edge accuracy \cite{ref25}. L2A surface reflectance is converted with the baseline-dependent offset, $\rho=(DN-1000)/10000$ for processing baseline 04.00 and later, rather than $\rho=DN/10000$: the difference is a uniform $+0.10$ in every band, which does not cancel in a spectral retrieval because it changes the shape of the spectrum rather than its scale. This dataset contains no SAR, so only nine purely optical methods are evaluated. The operational reference used in Section~\ref{sec:prodval} is the MODIS MCD15A3H LAI product at 500 m. Table~\ref{tab:1} summarizes the basic configuration of the two datasets.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.05}
+\caption{Basic Configuration of the Two Datasets\label{tab:1}}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.76in}>{\raggedright\arraybackslash}p{1.14in}>{\raggedright\arraybackslash}p{1.12in}@{}}
+\hline
+\textbf{Item} & \textbf{Main dataset} & \textbf{Reproduction dataset} \\
+\hline
+Source & SEN12MS-CR & Copernicus Data Space (self-built) \\
+Sensor / level & Sentinel-2 L1C (TOA) & Sentinel-2 L2A (surface) \\
+Region, season & Two scenes, Europe (spring, winter) & Four tiles, northern China (Jun--Sep 2022) \\
+Patches & 428 (128$\times$128, 10 m) & 156 (128$\times$128) \\
+Cloud mask & Threshold (visible brightness) & Official SCL band \\
+With SAR & Yes & No \\
+Methods evaluated & 15 & 9 (purely optical) \\
+Operational reference & --- & MODIS MCD15A3H (500 m, 4-day) \\
+\hline
+\end{tabular}
+\par\vspace{2pt}
+\parbox{\columnwidth}{\footnotesize Note: TOA is top-of-atmosphere reflectance; SCL is the Sentinel-2 scene classification layer.\par}
+\end{table}
+
+\subsection{Compared Methods}
+
+The 15 methods belong to three families, so the conclusions do not depend on a single error mechanism. Nine are non-learning methods: zero filling, mean filling, nearest-neighbor filling, blurred filling, Telea inpainting, histogram matching, spatial k-nearest-neighbor regression, SAR-guided replacement, and SAR-to-optical regression. Five are learning methods: a compact U-Net with optical input only; the same network with an added SAR channel; two configurations of the DSen2-CR residual structure \cite{ref13}; and UnCRtainTS (0.52 M parameters) \cite{ref26}, which uses official pretrained weights and is fine-tuned on the training split of this dataset. One is a generative method: a conditional diffusion model. The learning models are trained on the same split. When compute permits, we repeat with three random seeds; the cross-seed spread of PSNR is at most $\pm$0.5 dB for the five supervised models and $\pm$1.72 dB for the conditional diffusion model (Section~\ref{sec:robust}), in every case smaller than the gaps that separate the method families. The generative family contains only one small model, so we make no general claims about generative methods here. It is used only to test how sensitive metrics are to extremely failing methods.
+
+UnCRtainTS is used with the authors' publicly released single-temporal pretrained weights. Its input is two SAR channels plus 13 optical bands, and its output is 13 optical bands, matching the channel definition of this dataset exactly. Fine-tuning runs on 612 patches of the training split for 10 epochs with AdamW (learning rate $2\times10^{-4}$, cosine annealing), an L1 loss, and a batch size of 4. We freeze the statistics of all batch normalization layers (updating only convolutional and linear weights) so that any improvement comes from weight adaptation rather than batch-statistic drift. The validation set selects the epoch; the test set is evaluated only once at the end. Notably, when the same weights are used for inference without fine-tuning, UnCRtainTS reaches only 26.5 dB PSNR, lower than mean filling (26.8 dB), and its reconstruction errors in cloudy and clear regions are almost equal. This indicates that its output is biased toward an average state overall. This gap reflects differences in cloud-shadow intensity and imaging conditions between the two datasets, not an input-interface mismatch---because the same pipeline cannot produce such an error pattern when the weights are frozen. Once fine-tuned, the value rises to 32.6 dB.
+
+\subsection{Evaluation Metrics}
+
+The image-domain metrics are PSNR, SSIM, SAM, and ERGAS, together with the mean absolute error (MAE) and the root mean squared error (RMSE). All are computed over the ten usable bands $\Omega$ (excluding B1, B9, and B10, which are strongly affected by atmosphere, water vapor, and cirrus). Let $\hat{x}$ be the reconstructed image and $x$ the reference image. Then:
+
+\begin{equation*}
+\mathrm{PSNR}=10\log_{10}\frac{1}{\mathrm{MSE}}
+\end{equation*}
+
+\begin{equation}
+\mathrm{MSE}=\frac{1}{|\Omega|\,N_{p}}\sum_{b}\sum_{p}
+\bigl[\hat{x}(b,p)-x(b,p)\bigr]^{2}
+\label{eq:mse}
+\end{equation}
+
+\begin{equation}
+\mathrm{SAM}=\arccos\!\left\{
+\frac{\langle\hat{x},x\rangle}{\lVert\hat{x}\rVert\cdot\lVert x\rVert}
+\right\}
+\label{eq:sam}
+\end{equation}
+
+\begin{equation}
+\mathrm{ERGAS}=100\cdot\frac{h}{l}
+\sqrt{\frac{1}{|\Omega|}\sum_{b}
+\left(\frac{\mathrm{RMSE}_{b}}{\mu_{b}}\right)^{2}}
+\label{eq:ergas}
+\end{equation}
+
+Here SSIM follows the work of Wang et al. \cite{ref27}; within local sliding windows it jointly evaluates luminance, contrast, and structure. SAM adopts the form proposed by Kruse et al. \cite{ref9}; it computes the angle between spectral vectors, is insensitive to uniform scaling of the spectrum, and is evaluated per pixel before being averaged over the cloudy region. ERGAS is given by Wald \cite{ref28}; it normalizes by the mean of each band and suits multispectral remote sensing. $\mu_b$ is the mean of the reference image in band $b$, $N_p$ is the number of pixels in the evaluated region, and $h/l$ is the ratio of high to low resolution. Following the conventional 4:1 ratio of the data-fusion literature we set $h/l=4$. For this dataset the physically consistent value is 2, because the 20 m bands are interpolated to a 10 m grid and nothing is simulated at 40 m; halving $h/l$ would divide every ERGAS value reported here by two and would move no rank and no correlation, since the factor is multiplicative. We keep $h/l=4$ only for comparability with earlier work, so these values are not directly comparable with studies that set $h/l=1$. SSIM is computed per band and per window, then averaged. In (2), $\langle\cdot,\cdot\rangle$ denotes the inner product of two vectors and $\|\cdot\|$ is the L2 norm. In (3), $\mathrm{RMSE}_b$ is the root mean squared error of band $b$. Because RMSE is a monotone transform of the MSE in (1), it returns the same rank correlations as PSNR and is reported only for completeness.
+
+\subsection{Downstream Tasks}
+
+To test whether the conclusions hold only for one type of task, we set up three downstream tasks with distinct mechanisms. The first two are continuous parameter retrieval; the third is discrete decision-making.
+
+(1) LAI and Cab retrieval: We use a PROSAIL lookup table \cite{ref29,ref23} of 300,000 entries and perform 8-nearest-neighbor weighted retrieval over the ten usable bands. For each patch we compare the parameters retrieved from the reconstructed image with those retrieved from the cloud-free reference image at the same cloudy pixels (300 pixels sampled per patch), and take the mean absolute deviation:
+
+\begin{equation}
+\Delta\theta=\frac{1}{|P|}\sum_{p\in P}
+\bigl|\hat{\theta}(p)-\theta(p)\bigr|,\qquad
+\theta\in\{\mathrm{LAI},\mathrm{Cab}\}
+\label{eq:dtheta}
+\end{equation}
+
+where $P$ is the set of sampled pixels in the cloudy region, and $\hat{\theta}$ and $\theta$ are the parameters retrieved from the reconstructed and reference images, respectively.
+
+The accuracy of the lookup-table retriever itself must be stated first; otherwise we cannot separate the retrieval error in $\Delta$LAI from the cloud-removal error. We validate the 300,000 PROSAIL simulated spectra with leave-one-out testing. Without noise, LAI RMSE is 0.23 (R$^{2}$ = 0.99) and Cab is 2.7 $\mu$g/cm$^{2}$ (R$^{2}$ = 0.99). After adding 2\% multiplicative radiometric noise, they become 0.67 (R$^{2}$ = 0.91) and 4.7 $\mu$g/cm$^{2}$ (R$^{2}$ = 0.97). The median weighted standard deviation of neighboring LAI is 0.16, and the 90th percentile is 0.43, whereas the global standard deviation of LAI is 2.31. This indicates that the retrieval problem is essentially identifiable under the ten-band setting used here. We also note that $\Delta$LAI is a difference between two images at the same pixel, so most of the retriever's common-mode bias cancels out. Its uncertainty is therefore smaller than the absolute accuracy above.
+
+ The lookup table is deliberately narrow. Four parameters vary uniformly: LAI 0--8, Cab 5--100 $\mu$g/cm$^2$, leaf inclination 30--60$^\circ$ and soil brightness 0--1. Leaf structure $N=1.5$, carotenoid content 8 $\mu$g/cm$^2$, brown pigment 0, equivalent water and dry matter 0.01 cm, the hot-spot parameter 0.01 and the geometry (solar zenith 30$^\circ$, nadir view, Lambertian soil with $r_{\mathrm{soil}}=1$) are fixed. Spectra are convolved with Gaussian response functions of the 13 Sentinel-2A bands and the retrieval uses the ten bands of $\Omega$ with $k=8$ inverse-distance-weighted neighbors. Fixing structure and geometry is what makes LAI identifiable at all: with all eleven PROSAIL parameters free, the median LAI standard deviation among the 50 nearest neighbors is 1.55, close to the global 2.31, and retrieval carries no information; the configuration above brings it to 0.47. A single configuration does mean that the band-importance profile of Section~\ref{sec:mech} is conditional on it, which we take up in Section~\ref{sec:limits}.
+
+ Two null comparisons fix the scale against which $\Delta$LAI should be read; both are computed from the cloud-free reference alone, so no method output enters. The split-half test draws 600 clear pixels per patch, splits them into two disjoint sets of 300, retrieves LAI from each and averages $|\Delta\mathrm{LAI}|$ over pixels: this is what one scene and one retriever produce when nothing has been reconstructed, i.e. the sampling floor of the 300-pixel scheme. The radiometric test adds 2\% independent multiplicative noise to the same 300 pixels---the level used in the leave-one-out check---and compares with the unperturbed retrieval, isolating the part of the retrieval noise that does not cancel in a paired difference.
+
+(2) NDVI classification: On cloudy pixels, NDVI is computed from B8 and B4 and divided into three classes---non-vegetation, sparse vegetation, and dense vegetation---by thresholds 0.20 and 0.50. We compare the classification consistency between the reconstructed and reference images. The error is recorded as
+
+\begin{equation}
+\Delta_{\mathrm{class}}=1-\mathrm{OA},\qquad
+\mathrm{OA}=\frac{1}{|P|}\sum_{p\in P}
+\mathbf{1}\bigl[\hat{c}(p)=c(p)\bigr]
+\label{eq:oa}
+\end{equation}
+
+where $\hat{c}$ and $c$ are the classes of the reconstructed and reference images. Unlike $\Delta$LAI, $\Delta_{\mathrm{class}}$ arises from a discrete decision: a pixel is either right or wrong. Its error mechanism is fundamentally different from continuous parameter deviation.
+
+\subsection{Statistical Methods}
+
+Rank correlation is computed under three schemes: across methods (n = 15), across all method--patch pairs (n = 6,420), and restricted to qualified methods (PSNR $\geq$ 25 dB, n = 9). Because 15 samples are too few for reliable statistical inference, all method-level comparisons are accompanied by bootstrap confidence intervals. Patch-level comparisons use paired bootstrap, which resamples patches while preserving the method $\times$ patch structure. Let the absolute rank correlations of metrics a, b with downstream error be $|\rho_a|$ and $|\rho_b|$. The statistic is defined as
+
+\begin{equation}
+P(\text{diff}>0)=\frac{1}{B}\sum_{k=1}^{B}
+\mathbf{1}\bigl[\,|\rho_{a}^{(k)}|-|\rho_{b}^{(k)}|>0\,\bigr]
+\label{eq:boot}
+\end{equation}
+
+This is the resampling frequency of ``a is better than b'' over $B=2000$ bootstrap replicates, rather than a traditional p value \cite{ref11}. The reason is that this paper cares about the sign and magnitude of the difference between two correlation levels, not whether a single correlation coefficient is significantly nonzero. No correction for multiple comparisons is applied. More than ten paired comparisons are reported, but the quantity they return is a resampling frequency of a signed difference, which we read as an effect size rather than as a decision at a nominal level; a Bonferroni-type adjustment would not alter any qualitative statement here, all of which rest on differences in $|\rho|$ larger than 0.15.
+
+\section{Results}
+
+\subsection{Method Level: Can Image Metrics Predict Downstream Error?}
+
+\begin{table*}[!t]
+\renewcommand{\arraystretch}{1.05}
+\caption{Image-Domain Metrics and Downstream Errors of the 15 Methods (Mean over 428 Patches, Sorted by $\Delta$LAI Ascending)\label{tab:2}}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}l*{9}{>{\centering\arraybackslash}p{0.58in}}@{}}
+\hline
+\textbf{Method} & \textbf{PSNR/dB} & \textbf{SSIM} & \textbf{SAM/$^{\circ}$} & \textbf{ERGAS} & \textbf{MAE} & \textbf{RMSE} & \textbf{$\Delta$LAI} & \textbf{$\Delta$Cab} & \textbf{OA} \\
+\hline
+uncrtaints\_ft & 32.62$\pm$6.1 & 0.927$\pm$0.07 & 4.26 & 70.4 & 0.020 & 0.029 & 0.393 & 5.99 & 0.839 \\
+unet\_sar & 31.73$\pm$6.3 & 0.921$\pm$0.07 & 5.19 & 86.1 & 0.022 & 0.033 & 0.407 & 7.36 & 0.822 \\
+dsen2cr\_sar & 31.36$\pm$5.5 & 0.907$\pm$0.09 & 5.43 & 90.2 & 0.023 & 0.033 & 0.417 & 7.91 & 0.820 \\
+dsen2cr\_opt & 31.38$\pm$6.0 & 0.909$\pm$0.09 & 5.25 & 89.5 & 0.023 & 0.034 & 0.422 & 7.24 & 0.811 \\
+unet\_opt & 30.41$\pm$7.0 & 0.908$\pm$0.09 & 6.27 & 106.9 & 0.027 & 0.041 & 0.492 & 9.20 & 0.809 \\
+blur\_fill & 26.43$\pm$3.8 & 0.882$\pm$0.09 & 8.17 & 152.8 & 0.040 & 0.052 & 0.561 & 12.96 & 0.644 \\
+sar\_guided & 26.81$\pm$4.4 & 0.882$\pm$0.09 & 8.11 & 143.5 & 0.039 & 0.051 & 0.580 & 12.42 & 0.648 \\
+knn\_spatial & 23.21$\pm$1.7 & 0.837$\pm$0.09 & 10.51 & 272.0 & 0.060 & 0.070 & 0.581 & 15.76 & 0.404 \\
+sar\_regression & 26.82$\pm$4.5 & 0.885$\pm$0.09 & 8.13 & 143.5 & 0.039 & 0.051 & 0.583 & 12.49 & 0.648 \\
+inpaint\_telea & 23.00$\pm$1.7 & 0.835$\pm$0.10 & 10.50 & 284.7 & 0.061 & 0.072 & 0.584 & 15.70 & 0.397 \\
+mean\_fill & 26.76$\pm$4.6 & 0.887$\pm$0.09 & 8.21 & 144.6 & 0.040 & 0.052 & 0.591 & 12.49 & 0.647 \\
+nearest\_fill & 22.02$\pm$1.6 & 0.802$\pm$0.11 & 11.67 & 333.5 & 0.069 & 0.081 & 0.624 & 16.74 & 0.310 \\
+hist\_match & 22.88$\pm$2.0 & 0.830$\pm$0.10 & 10.43 & 197.6 & 0.055 & 0.074 & 0.742 & 12.21 & 0.616 \\
+diffusion & 18.35$\pm$1.5 & 0.615$\pm$0.23 & 42.28 & 361.9 & 0.099 & 0.123 & 1.220 & 44.13 & 0.212 \\
+zero\_fill & 15.54$\pm$1.1 & 0.531$\pm$0.28 & 90.00 & 409.8 & 0.144 & 0.169 & 1.527 & 28.88 & 0.018 \\
+\hline
+\end{tabular}
+\par\vspace{2pt}
+\parbox{\textwidth}{\footnotesize Note: PSNR and SSIM are given as mean $\pm$ standard deviation over patches; SAM, ERGAS, MAE and RMSE are patch means, with MAE and RMSE in surface-reflectance units. $\Delta$LAI is in LAI units and $\Delta$Cab in $\mu$g/cm$^2$. All image metrics refer to one trained instance (seed 0) of each learning model; the cross-seed spread of those models is given in Table~\ref{tab:10}. OA is the overall accuracy of NDVI classification; higher is better. In the method names, ``opt'' means optical input only and ``sar'' means SAR input included.\par}
+\end{table*}
+
+Table~\ref{tab:2} lists the 15 methods. Sorting by image metrics and by downstream error agrees at the two ends but diverges in the middle. The five learning models occupy the top five PSNR positions, yet dsen2cr\_opt drops to fourth in $\Delta$LAI, while UnCRtainTS ranks first in both. The clearest counterexample is histogram matching. Its SAM of 10.43$^{\circ}$ is not outstanding, but its $\Delta$LAI of 0.74 ranks 13th among the 15 methods, ahead of only diffusion and zero filling. Fig.~\ref{fig:1} shows the scatter of each metric against $\Delta$LAI.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{fig1.png}
+\caption{Method-level scatter of each image metric against $\Delta$LAI (each point is one method; only four representative methods are labeled to avoid overlapping labels; the values of all 15 methods are given in Table~\ref{tab:2}).\label{fig:1}}
+\end{figure*}
+
+Disagreement among the three downstream tasks is equally clear. The $\Delta$Cab of dsen2cr\_opt is 7.24, second only to UnCRtainTS, but its $\Delta$LAI ranks only fourth. Histogram matching ranks 13th in $\Delta$LAI but rises to 6th in $\Delta$Cab. In NDVI classification, its OA is 0.616, lower than all five learning models (0.809--0.839) and close to the interpolation family (0.644--0.648). The rank correlation between method rankings on $\Delta$LAI and $\Delta$Cab is 0.83; three methods change by more than three positions. This means that ``method X is better'' must be qualified with ``for which task.''
+
+ Before comparing methods we fix the scale against which $\Delta$LAI should be read, using the two null comparisons of Section~3.4, neither of which involves a method output. The split-half test returns a mean $|\Delta\mathrm{LAI}|$ of 0.63 (median 0.44) between two disjoint 300-pixel samples of the same cloud-free patch; because the samples are independent, this corresponds to a per-patch sampling standard deviation of about 0.31 for a single estimate. The radiometric test, in which only 2\% multiplicative noise is added to the same pixels, returns a median of 0.036 (90th percentile 0.053). Two things follow. First, the paired difference behaves as the leave-one-out error of 0.67 suggested it should: the retrieval noise on which that error rests is almost entirely common-mode, so the residual floor is eleven times smaller than the smallest between-method difference in Table~\ref{tab:2} (0.393) and five times smaller than the 0.20 LAI spread of the eleven non-degenerate methods. The comparison between methods is therefore not noise-limited. Second, the per-patch value is: in 55\% of patches the split-half difference alone exceeds the $\Delta$LAI of the best method, and in 41\% it exceeds that of the median method. Statements about a single patch sit below the sampling floor, and the rankings reported here are meaningful only after averaging over the 428 patches, where the standard error of a method mean is 0.014--0.023 LAI. At that resolution the four learning models lie within 1.5 standard errors of one another, the gap from them to blur\_fill is about seven standard errors, and the 0.4--1.1 LAI differences that separate the families are far outside it.
+
+\subsection{Aggregation Scheme: Same Data, Opposite Conclusions}\label{sec:agg}
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.05}
+\caption{Rank Correlation of Each Metric with $\Delta$LAI under Three Aggregation Schemes\label{tab:3}}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}l*{3}{>{\centering\arraybackslash}p{0.80in}}@{}}
+\hline
+\textbf{Metric} & \textbf{Across methods (n=15)} & \textbf{Across patches (n=6420)} & \textbf{Qualified methods (n=9)} \\
+\hline
+PSNR & $-$0.936 & $-$0.756 & $-$0.867 \\
+SSIM & $-$0.911 & $-$0.564 & $-$0.800 \\
+SAM & +0.925 & +0.726 & +0.933 \\
+ERGAS & +0.914 & +0.574 & +0.883 \\
+MAE & +0.918 & +0.708 & +0.900 \\
+RMSE & +0.936 & +0.756 & +0.867 \\
+\hline
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:3} makes the dependence on the aggregation scheme explicit. Across all 15 methods, PSNR and SAM differ by only 0.011. At the patch level, PSNR is higher by 0.029; the paired bootstrap places this difference away from zero (interval [$-$0.057, $-$0.006] for $|\rho_{\mathrm{SAM}}|-|\rho_{\mathrm{PSNR}}|$, probability that the difference is above zero 0.006). Once we restrict to the nine methods with PSNR above 25 dB, however, the order reverses: SAM reaches 0.933 and PSNR 0.867. This reversal also holds under the relative scheme of taking the top K by PSNR (K = 4, 5, 6), so it is not an artifact of an absolute threshold; on the reproduction dataset the order turns again, as Section~\ref{sec:cross} reports.
+
+Table~\ref{tab:3} also contains a mechanical effect that had better be stated than left for a reader to find. The qualified pool is defined on PSNR, so it truncates the very variable whose correlation it is used to measure. Across the 15 methods the standard deviation of PSNR is 4.94 dB; across the nine qualified methods it is 2.44 dB, so the pool halves it. Correcting the restricted coefficient for this direct range restriction with the Case II formula of Sackett and Yang \cite{ref45} moves $\rho_{\mathrm{PSNR}}$ from $-$0.867 to $-$0.962, which is to say that the whole of its nominal deficit against SAM (0.933) is accounted for by the way the pool was built, and the corrected value is not lower than SAM's. The same correction is uninformative for SAM: SAM is restricted too, though indirectly, its standard deviation falling from 21.8$^\circ$ to 1.5$^\circ$ because a PSNR floor of 25 dB nearly fixes it, and its corrected value saturates at unity. We therefore do not claim that SAM is the better metric among qualified methods. What the third column of Table~\ref{tab:3} shows is that the two cannot be ordered at all once the pool is fixed this way, and that the nominal order is a property of the pool.
+
+This reading is confirmed when the pool is defined without reference to any image metric. Taking $\Delta$LAI $\le$ 0.6 as the criterion (n = 11) gives PSNR $-$0.845, SAM +0.891, ERGAS +0.864, MAE +0.866 and SSIM $-$0.782: PSNR again ranks below SAM and SSIM again last, but this pool was not selected on PSNR. Splitting by family moves the order again. Among the six learning methods PSNR and SAM tie at 0.943; among the nine non-learning methods PSNR leads, 0.717 against 0.667. A statement of the form ``SAM ranks methods better than PSNR'' is thus true in the qualified pool, false in the non-learning pool and undecidable in the full one, which is the position this paper argues for: the ordering is a property of the pool, not of the metric.
+
+One caution applies to every interval reported below. The 428 patches are not independent draws: they come from two scenes, 246 spring and 182 winter, and a bootstrap that resamples scenes has only two clusters, so its interval is the distance between two numbers and carries no information. We report replication instead. Every sign in Table~\ref{tab:3} holds within each scene taken separately (spring: PSNR $-$0.936, SAM +0.946, SSIM $-$0.929; winter: $-$0.768, +0.846, $-$0.743), and the magnitudes are consistently lower in winter, the scene with the more heterogeneous surfaces. Inside the qualified pool the SAM advantage disappears in winter, where SAM and PSNR tie at 0.817 while ERGAS leads at 0.967. Patch-level intervals should accordingly be read as lower bounds on the uncertainty.
+
+SSIM behaves completely differently: it ranks last under every scheme. ERGAS sits in the middle of the table and never leads, and it is the metric whose value moves most when the dataset changes (0.883 here, 0.683 on the reproduction dataset). The paired bootstrap gives SAM an advantage of 0.162 over SSIM (interval [0.120, 0.208]) and 0.152 over ERGAS (interval [0.126, 0.175]); the probability that the difference is above zero is 1.000 in both cases. This comparative conclusion survives all the perturbations we apply. Eroding or dilating the mask by one pixel changes every correlation coefficient by no more than 0.02. The signs also hold on the reproduction dataset, although the magnitudes there do not (Section~\ref{sec:cross}). After removing the clearly poor methods, Fig.~\ref{fig:2} shows the reconstructed relationship.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{fig2.png}
+\caption{Change in the discriminative power of each metric after removing the clearly poor methods.\label{fig:2}}
+\end{figure*}
+
+The claim that a single mean summary hides between-method detail has been made before \cite{ref11}. This paper goes further: changing the aggregation scheme changes not only the detail but also the direction of the conclusion.
+
+\subsection{Candidate Pool: Where Does PSNR's Advantage Come From?}\label{sec:pool}
+
+\begin{table*}[!t]
+\renewcommand{\arraystretch}{1.05}
+\caption{Effect of Candidate-Pool Composition on the Conclusions (Direction Unchanged, Values Vary with the Pool)\label{tab:4}}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{2.05in}*{5}{>{\centering\arraybackslash}p{0.72in}}@{}}
+\hline
+\textbf{Method pool} & \textbf{No. of methods} & \textbf{PSNR (method level)} & \textbf{SAM (method level)} & \textbf{SAM (qualified)} & \textbf{PSNR (qualified)} \\
+\hline
+All 15 (current) & 15 & $-$0.936 & +0.925 & 0.933 & 0.867 \\
+Drop zero\_fill and diffusion (PSNR $<$ 20 dB) & 13 & $-$0.901 & +0.885 & 0.933 & 0.867 \\
+Drop nearest\_fill and hist\_match & 13 & $-$0.907 & +0.934 & 0.933 & 0.867 \\
+Nine qualified + zero\_fill + diffusion & 11 & $-$0.927 & +0.964 & 0.933 & 0.867 \\
+Nine qualified only & 9 & $-$0.867 & +0.933 & 0.933 & 0.867 \\
+\hline
+\end{tabular}
+\par\vspace{2pt}
+\parbox{\textwidth}{\footnotesize Note: qualified denotes the nine methods with PSNR $\geq$ 25 dB, which are retained in every pool.\par}
+\end{table*}
+
+To rule out the possibility that weak baselines inflate the correlations, we remove the two methods with PSNR below 20 dB (zero filling at 15.5 dB and diffusion at 18.4 dB) and recompute. None of the correlation coefficients on the qualified-method subset changes (SAM stays 0.933, PSNR stays $-$0.867), because the weak baselines are not in that subset. Only the method level moves: PSNR from $-$0.936 to $-$0.901 and SAM from 0.925 to 0.885. Table~\ref{tab:4} varies the pool in three further ways---removing the next two weakest methods (nearest filling and histogram matching), adding two weak methods back to the nine qualified ones, and keeping the nine qualified methods alone. Among qualified methods SAM stays at 0.933 and PSNR at $-$0.867 in every pool, and SSIM remains the worst metric throughout. The method-level values, however, move noticeably (SAM goes from 0.925 to 0.964). Our conclusions should therefore be read as qualitative and directional, not as quantitative claims tied to a specific number.
+
+\subsection{Mechanism: A Band-Level Explanation}\label{sec:mech}
+
+\begin{table*}[!t]
+\renewcommand{\arraystretch}{1.05}
+\caption{Band-Level Decomposition: What Drives PSNR and What Drives Retrieval\label{tab:5}}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}l*{3}{>{\centering\arraybackslash}p{2.05in}}@{}}
+\hline
+\textbf{Band} & \textbf{Share of global MSE} & \textbf{LAI sensitivity (LAI per unit reflectance)} & \textbf{PSNR--$\Delta$LAI $\rho$ for this band} \\
+\hline
+B8A & 22.6\% & 19.8 & $-$0.769 \\
+B8 & 19.3\% & 18.8 & $-$0.812 \\
+B7 & 17.8\% & 38.0 & $-$0.751 \\
+B6 & 11.8\% & 20.1 & $-$0.753 \\
+B11 & 9.3\% & 76.6 & $-$0.642 \\
+B12 & 4.8\% & 37.2 & $-$0.538 \\
+B5 & 4.1\% & 18.8 & $-$0.555 \\
+B4 & 3.6\% & 17.4 & $-$0.519 \\
+B2 & 3.6\% & 14.2 & $-$0.523 \\
+B3 & 3.1\% & 17.0 & $-$0.540 \\
+\hline
+\end{tabular}
+\par\vspace{2pt}
+\parbox{\textwidth}{\footnotesize Note: sensitivity is the change in retrieved LAI when the reflectance of that band increases by 0.01; $\rho$ is the rank correlation between per-band PSNR and $\Delta$LAI (n = 6,420).\par}
+\end{table*}
+
+PSNR is an equally weighted average of per-band MSE, but the noise across bands is not equal. Bands B8A, B8, and B7 together contribute 60\% of the global MSE, simply because their reflectance magnitudes are the largest and their absolute errors therefore dominate. Retrieval is governed by a different set of bands. Raising B11 by one unit of reflectance changes LAI by 76.6, which is 4.1 times the value of 18.8 for B8, yet B11 accounts for only 9.3\% of the MSE. Across the ten bands, the correlation between the two importance profiles is only r = +0.06, i.e., essentially unrelated. A metric dominated by B8A/B8/B7 is effectively scoring a quantity that retrieval barely reads. This is the physical source of the decoupling. Table~\ref{tab:5} gives the per-band MSE share and retrieval sensitivity; Fig.~\ref{fig:3} compares the two importance profiles.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{fig3.png}
+\caption{The bands that dominate PSNR and the bands that dominate retrieval do not coincide (profile correlation r = +0.06).\label{fig:3}}
+\end{figure*}
+
+This result agrees with retrieval theory. Radiative transfer retrieval is itself ill-posed; observation errors are amplified into parameter space \cite{ref30}. Different retrieval methods depend on bands differently \cite{ref24}. Therefore, which band the error falls on decides whether it enters the retrieval.
+
+\subsection{Conditional Dependence: Cloud Type, Cloud Thickness, and Land Surface Type}
+
+\begin{table*}[!t]
+\renewcommand{\arraystretch}{1.05}
+\caption{Rank Correlations Stratified by Cloud Type (B10 Criterion), Cloud Thickness (Luminance Terciles), and Land Surface Type (NDVI Terciles)\label{tab:6}}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}l*{7}{>{\centering\arraybackslash}p{0.78in}}@{}}
+\hline
+\textbf{Metric} & \textbf{Water cloud} & \textbf{Cirrus} & \textbf{Thin cloud} & \textbf{Medium cloud} & \textbf{Thick cloud} & \textbf{Low NDVI} & \textbf{High NDVI} \\
+\hline
+PSNR & $-$0.823 & $-$0.618 & $-$0.703 & $-$0.800 & $-$0.763 & $-$0.570 & $-$0.852 \\
+SSIM & $-$0.613 & $-$0.354 & $-$0.429 & $-$0.671 & $-$0.644 & $-$0.266 & $-$0.656 \\
+SAM & +0.779 & +0.490 & +0.676 & +0.777 & +0.706 & +0.402 & +0.766 \\
+ERGAS & +0.721 & +0.356 & +0.478 & +0.673 & +0.557 & +0.281 & +0.749 \\
+MAE & +0.797 & +0.555 & +0.637 & +0.762 & +0.723 & +0.486 & +0.824 \\
+\hline
+\end{tabular}
+\par\vspace{2pt}
+\parbox{\textwidth}{\footnotesize Note: cloud type is split by the median of B10; higher B10 means cirrus. All three are proxy variables, not cloud classification products or true optical thickness.\par}
+\end{table*}
+
+After stratifying by cloud type, the inconsistency among metrics shows a clear structure. The split uses B10, which is acquired at 60 m and is resampled to the 10 m grid like the other coarse bands, so the proxy is smoother than the bands it is used to stratify; the split is coarse in exactly the direction that matters at cirrus edges. On water-cloud scenes, every metric tracks retrieval error reasonably well (SAM 0.779, PSNR $-$0.823). On cirrus scenes, the same metrics lose a quarter to two-fifths of their discriminative power (SAM 0.779$\rightarrow$0.490, PSNR $-0.823\rightarrow-0.618$, SSIM $-0.613\rightarrow-0.354$). The physical reason is that thin cirrus is better suited to a light color adjustment than to a ``reconstruction.'' The residual appears as a smooth spectral shift: too small to depress PSNR noticeably, yet large enough to bias the retrieval. The land surface type shows a similar pattern. The low-vegetation group loses discriminative power across the board (SAM from 0.766 to 0.402). This is not because the metric worsens, but because the retriever has a small dynamic range; the impact of cloud-removal error on the parameter is compressed, leaving less room for discrimination. For cloud thickness, the weakest discriminative power appears on thin cloud (SAM 0.676 $\rightarrow$ 0.777 $\rightarrow$ 0.706), consistent with a range-limited effect. Table~\ref{tab:6} gives the stratified rank correlations; Fig.~\ref{fig:4} compares the discriminative power.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{fig4.png}
+\caption{Metric discriminative power under three stratifications: land surface type, cloud thickness, and cloud type.\label{fig:4}}
+\end{figure*}
+
+\subsection{Task Dependence: Continuous Retrieval versus Discrete Classification}\label{sec:task}
+
+\begin{table*}[!t]
+\renewcommand{\arraystretch}{1.05}
+\caption{Discriminative Power of Each Metric under the Three Downstream Tasks\label{tab:7}}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}l*{6}{>{\centering\arraybackslash}p{0.98in}}@{}}
+\hline
+\textbf{Metric} & \textbf{vs $\Delta$LAI (qualified)} & \textbf{vs $\Delta$Cab (qualified)} & \textbf{vs $\Delta_{\mathrm{class}}$ (qualified)} & \textbf{vs $\Delta$LAI (full)} & \textbf{vs $\Delta_{\mathrm{class}}$ (full)} & \textbf{vs $\Delta_{\mathrm{class}}$ (patch level)} \\
+\hline
+PSNR & $-$0.867 & $-$0.967 & $-$0.967 & $-$0.936 & $-$0.982 & $-$0.746 \\
+SSIM & $-$0.800 & $-$0.850 & $-$0.833 & $-$0.911 & $-$0.954 & $-$0.662 \\
+SAM & +0.933 & +0.967 & +0.967 & +0.925 & +0.989 & +0.904 \\
+ERGAS & +0.883 & +0.983 & +0.983 & +0.914 & +0.996 & +0.764 \\
+MAE & +0.900 & +0.950 & +1.000 & +0.918 & +1.000 & +0.758 \\
+\hline
+\end{tabular}
+\par\vspace{2pt}
+\parbox{\textwidth}{\footnotesize Note: qualified refers to the nine methods with PSNR $\geq$ 25 dB; full refers to the 15 methods; patch level is n = 6,420.\par}
+\end{table*}
+
+In Table~\ref{tab:7}, for LAI, SAM leads among qualified methods (0.933) while PSNR lags (0.867). For Cab, PSNR recovers to 0.967 and ERGAS reaches 0.983. For the discrete NDVI classification, the situation changes again: among qualified methods, MAE reaches a perfect rank agreement of 1.000, and both SAM and PSNR are 0.967. At the patch level, however, SAM leads by a wide margin (0.904 vs. 0.746), a gap of 0.16. In other words, with the same methods and the same images, the best metric changes as soon as the downstream task changes.
+
+Fitting metric weights with non-negative least squares for each task makes this difference even more direct. The fitted weights are given in Table~\ref{tab:8}.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.05}
+\caption{Fitted Weights of Task-Consistency Weighting under Two Downstream Targets\label{tab:8}}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}l*{2}{>{\centering\arraybackslash}p{0.95in}}@{}}
+\hline
+\textbf{Metric} & \textbf{Target = $\Delta$LAI} & \textbf{Target = $\Delta$Cab} \\
+\hline
+PSNR & 0.052 & 0.000 \\
+RMSE & 0.254 & 0.000 \\
+SSIM & 0.007 & 1.576 \\
+SAM & 0.059 & 2.645 \\
+ERGAS & 0.000 & 5.238 \\
+MAE & 0.000 & 0.000 \\
+\hline
+\end{tabular}
+\par\vspace{2pt}
+\parbox{\columnwidth}{\footnotesize Note: the weights are fitted by non-negative least squares. Because the metrics have different units, absolute values are not directly comparable. One should look at which metrics are selected and which are pushed to zero.\par}
+\end{table}
+
+For LAI, the weights fall on RMSE (0.25), SAM (0.06), and PSNR (0.05), with SSIM at only 0.007. For Cab, they fall on ERGAS (5.24), SAM (2.65), and SSIM (1.58), while PSNR and RMSE are pushed exactly to zero. With the same data and the same methods, PSNR shifts from useful to unused. On the held-out set, this weighting scheme improves rank correlation by only 0.009 (LAI) and 0.024 (Cab) over the strongest single metric. Its value therefore lies not in accuracy gain, but in turning metric selection from an empirical judgment into a reproducible and auditable fitting result. The truly informative fact is that the weights migrate as a whole with the task.
+
+\subsection{Robustness: Mask Boundary and Random Seeds}\label{sec:robust}
+
+\begin{table*}[!t]
+\renewcommand{\arraystretch}{1.05}
+\caption{Change in Discriminative Power When the Mask Boundary Is Off by 1 Pixel\label{tab:9}}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}ll*{3}{>{\centering\arraybackslash}p{1.35in}}@{}}
+\hline
+\textbf{Scheme} & \textbf{Metric} & \textbf{Erode 1 px} & \textbf{Original mask} & \textbf{Dilate 1 px} \\
+\hline
+All methods & PSNR & $-$0.943 & $-$0.936 & $-$0.939 \\
+All methods & SAM & +0.943 & +0.925 & +0.932 \\
+Qualified methods & PSNR & $-$0.883 & $-$0.867 & $-$0.883 \\
+Qualified methods & SAM & +0.933 & +0.933 & +0.933 \\
+\hline
+\end{tabular}
+\end{table*}
+
+All the above results assume an accurate cloud mask, but in practice the mask comes from a cloud detection product, whose edges often carry a 1--2 pixel error. We perturb only the evaluation region, so the method outputs themselves remain unchanged and the variable is unique. The evaluation mask is eroded (area reduced by 13.5\%), kept, and dilated (area increased by 10.9\%). In the three cases, the all-method-level PSNR ranges from $-$0.936 to $-$0.943 and SAM from 0.925 to 0.943. At the qualified-method level, SAM stays at 0.933 and PSNR moves only from $-$0.867 to $-$0.883. The fluctuation between variants is no more than 0.02, far smaller than the gap between SAM and PSNR. Table~\ref{tab:9} gives the discriminative power under the three mask variants; Fig.~\ref{fig:5} shows the magnitude of the change.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{fig5.png}
+\caption{When the mask boundary is off by 1 pixel, the discriminative power of each metric is almost unchanged.\label{fig:5}}
+\end{figure*}
+
+For the random-seed test, each of the six learning baselines is trained three times (the SAR configuration of DSen2-CR twice) and recomputed under the same test set, the same mask, and the same retriever. The results show that PSNR sensitivity to training randomness differs by nearly 300 times across methods. UnCRtainTS has a seed standard deviation of 0.01 dB, while the conditional diffusion model reaches 1.72 dB (peak-to-peak 3.2 dB); the other four models fall between 0.04 and 0.49 dB. In contrast, the dispersion of the same weights on downstream error is much smaller. The $\Delta$LAI of the diffusion model lies only between 1.212 and 1.218 (0.5\%). In other words, image metrics are noisier than downstream metrics: changing the training seed can move PSNR by 3 dB while the downstream ranking barely moves. Table~\ref{tab:10} gives the seed stability of the six learning baselines.
+
+\begin{table*}[!t]
+\renewcommand{\arraystretch}{1.05}
+\caption{Seed Stability of the Six Learning Baselines (Recomputed on the Same Test Set)\label{tab:10}}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.82in}*{4}{>{\centering\arraybackslash}p{1.16in}}@{}}
+\hline
+\textbf{Model} & \textbf{PSNR/dB} & \textbf{SAM/$^{\circ}$} & \textbf{$\Delta$LAI} & \textbf{No. of seeds} \\
+\hline
+Conditional diffusion & 16.39 $\pm$ 1.72 & 48.99 $\pm$ 5.97 & 1.214 $\pm$ 0.003 & 3 \\
+DSen2-CR (optical only) & 31.51 $\pm$ 0.12 & 5.11 $\pm$ 0.12 & 0.418 $\pm$ 0.004 & 3 \\
+DSen2-CR (optical + SAR) & 31.33 $\pm$ 0.04 & 5.48 $\pm$ 0.07 & 0.418 $\pm$ 0.001 & 2 \\
+UnCRtainTS (fine-tuned) & 32.61 $\pm$ 0.01 & 4.27 $\pm$ 0.01 & 0.394 $\pm$ 0.002 & 3 \\
+U-Net (optical only) & 30.74 $\pm$ 0.49 & 6.16 $\pm$ 0.27 & 0.484 $\pm$ 0.024 & 3 \\
+U-Net (optical + SAR) & 31.49 $\pm$ 0.23 & 5.69 $\pm$ 0.58 & 0.433 $\pm$ 0.025 & 3 \\
+\hline
+\end{tabular}
+\par\vspace{2pt}
+\parbox{\textwidth}{\footnotesize Note: $\pm$ is the cross-seed standard deviation over three seeds (two for the SAR configuration of DSen2-CR). For the conditional diffusion model the three seeds span 15.09--18.34 dB; Table~\ref{tab:2} reports seed 0, and the 2 dB gap between the two tables is that seed choice alone, not a change of test set or of mask bookkeeping. The UnCRtainTS values are from fine-tuning the official weights on the training split of this dataset.\par}
+\end{table*}
+
+This also defines the interpretable range of the main-table ranking. The 5--13 dB gaps between methods far exceed any seed noise, so a single seed does not affect the end-to-end conclusion. Among the top four, however, whose gaps are below 0.4 dB, only UnCRtainTS ($\pm$0.01 dB) is resolvable. The ordering among the three configurations of U-Net and DSen2-CR falls within seed noise and should not be interpreted.
+
+The mask definition itself is a contested step. Existing work notes that a static binary mask cannot characterize cloud-thickness changes \cite{ref31}, and another way to characterize reconstruction reliability is to explicitly provide uncertainty \cite{ref26}. Our perturbation experiment shows that, on the datasets and candidate pools used here, such differences are not enough to change the ranking conclusions.
+
+\subsection{Failure Modes: Same PSNR, Different Ways to Fail}
+
+The previous sections show that the goodness of PSNR depends on the candidate pool, but they do not answer a more basic question. When PSNR is the same, is the way of failing the same? For each method and each band, we regress the prediction p against the truth t over cloud-masked pixels by least squares, p $\approx$ $\mu_p$ + a(t $-$ $\mu_t$). Because the residual is orthogonal to t and has zero mean, the MSE decomposes exactly into three terms with no cross term:
+
+\begin{equation}
+\mathrm{MSE}=(\mu_{p}-\mu_{t})^{2}
++(1-a)^{2}\operatorname{Var}(t)+\operatorname{Var}(e)
+\label{eq:decomp}
+\end{equation}
+
+The three terms correspond to overall shift (the brightness is wrong as a whole), contrast compression (flattening or amplifying the differences among land objects), and structural residual (spatial and spectral structure does not match). Their sum equals exactly the MSE used by PSNR, so this is a decomposition of PSNR rather than a separate new metric.
+
+\begin{table*}[!t]
+\renewcommand{\arraystretch}{1.05}
+\caption{Error-Mode Composition of the 15 Methods (Percentage of MSE)\label{tab:11}}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}l*{5}{>{\centering\arraybackslash}p{1.08in}}@{}}
+\hline
+\textbf{Method} & \textbf{PSNR} & \textbf{Overall shift} & \textbf{Contrast compression} & \textbf{Structural residual} & \textbf{$\Delta$LAI} \\
+\hline
+zero\_fill & 15.5 & 95\% & 5\% & 0\% & 1.527 \\
+diffusion & 18.3 & 76\% & 8\% & 16\% & 1.220 \\
+nearest\_fill & 22.0 & 57\% & 16\% & 27\% & 0.624 \\
+hist\_match & 22.9 & 30\% & 18\% & 53\% & 0.742 \\
+inpaint\_telea & 23.0 & 56\% & 19\% & 25\% & 0.584 \\
+knn\_spatial & 23.2 & 54\% & 20\% & 26\% & 0.581 \\
+blur\_fill & 26.4 & 56\% & 37\% & 7\% & 0.561 \\
+mean\_fill & 26.8 & 59\% & 41\% & 0\% & 0.591 \\
+sar\_guided & 26.8 & 59\% & 37\% & 5\% & 0.580 \\
+sar\_regression & 26.8 & 59\% & 37\% & 4\% & 0.583 \\
+unet\_opt & 30.4 & 25\% & 57\% & 17\% & 0.492 \\
+dsen2cr\_sar & 31.4 & 16\% & 53\% & 31\% & 0.417 \\
+dsen2cr\_opt & 31.4 & 16\% & 63\% & 21\% & 0.422 \\
+unet\_sar & 31.7 & 20\% & 59\% & 21\% & 0.407 \\
+uncrtaints\_ft & 32.6 & 15\% & 68\% & 17\% & 0.393 \\
+\hline
+\end{tabular}
+\par\vspace{2pt}
+\parbox{\textwidth}{\footnotesize Note: the three terms sum to 100\% before rounding; entries are rounded to integers, so a row may total 99\% or 101\%. Smoothing-type methods have near-zero structural residual, i.e., they do not generate structure at all.\par}
+\end{table*}
+
+At the same PSNR, the failure mode can be completely different. Within the narrow interval of 26.4--26.8 dB, the structural-residual shares of four methods are 0\% (mean filling), 4\% (SAR regression), 5\% (SAR guided), and 7\% (blurred filling). They generate almost no structure; their errors come entirely from shift and contrast. In contrast, histogram matching at 22.9 dB has a structural residual as high as 53\%. The learning methods have yet another profile. Their errors are dominated by the contrast term (53\%--68\%), with structural residuals of only 17\%--31\%. A single scalar PSNR thus collapses three fundamentally different kinds of failure into one number.
+
+Aligning the three terms with the downstream error yields the following. The rank correlations with $\Delta$LAI are +0.96 for total MSE, +0.94 for overall shift, +0.60 for contrast compression, and +0.15 for structural residual. The discriminative power is almost entirely carried by the overall-shift term, while the structural-residual term carries almost no information. Within the qualified methods, this relationship even reverses sign (the residual term versus $\Delta$LAI is $-$0.77). The smoothing-type methods that generate no structure at all have the smallest residual yet the largest retrieval error. This shows that the absolute size of the residual term is not the optimization target. It only marks the binary property of whether the model is generating land objects. For the core argument of this paper, the implication is that PSNR can screen out poor methods mainly because it mostly measures shift. Among high-quality methods, what truly distinguishes them is contrast and structure, two terms that are much more weakly related to downstream tasks. Table~\ref{tab:11} gives the error-mode composition; Fig.~\ref{fig:6} compares the composition and the discriminative power of the three components.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{fig6.png}
+\caption{Left: error-mode composition of the 15 methods. Right: discriminative power of the three components against $\Delta$LAI.\label{fig:6}}
+\end{figure*}
+
+Decomposing distortion into orthogonal components is not new. Image quality metrics have long split distortion into correlation loss, luminance distortion, and contrast distortion \cite{ref32}. Our decomposition simply moves this idea onto the three components---shift, contrast, and structure---that correspond directly to reconstruction error, and uses them to distinguish the failure modes of different families \cite{ref7,ref8}.
+
+\subsection{Cross-Dataset Validation}\label{sec:cross}
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.05}
+\caption{Comparison of Discriminative Power on the Main and Reproduction Datasets\label{tab:12}}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.55in}*{3}{>{\centering\arraybackslash}p{0.78in}}@{}}
+\hline
+\textbf{Metric} & \textbf{Main data (qualified, n=9)} & \textbf{Reproduction data (full, n=9)} & \textbf{Shift in $|\rho|$} \\
+\hline
+PSNR & $-$0.867 & $-$0.917 & $+$0.05 \\
+SAM & +0.933 & +0.650 & $-$0.28 \\
+ERGAS & +0.883 & +0.683 & $-$0.20 \\
+SSIM & $-$0.800 & $-$0.900 & $+$0.10 \\
+\hline
+\end{tabular}
+\par\vspace{2pt}
+\parbox{\columnwidth}{\footnotesize Note: main-dataset values use the nine qualified methods; the reproduction dataset has only nine methods in total, all of which are used. The sign of every correlation is preserved on the second dataset; the magnitudes and the ordering between metrics are not. $\rho$ is the Spearman correlation with $\Delta$LAI.\par}
+\end{table}
+
+On the independently built Sentinel-2 L2A dataset, the signs are reproduced: PSNR $-$0.917, SSIM $-$0.900, ERGAS +0.683 and SAM +0.650, each in the direction expected of a metric that carries information. The magnitudes and the ordering are not. On the main dataset SAM leads the qualified methods at 0.933 and SSIM trails at 0.800; here SSIM is second at 0.900 and SAM is last at 0.650. The reversal has a mechanical explanation in the composition of this pool. Seven of the nine methods---the six interpolation baselines and the DSen2-CR model---fall between 0.95 and 1.06 LAI in retrieval error, while the two outliers, zero filling at 1.79 and the U-Net at 2.00, fail in the same way as everywhere else. The rank correlation is therefore decided by differences of about 0.01 LAI among methods that the dataset does not separate, and any metric that orders that near-tie differently moves by 0.1--0.3. This is the candidate-pool effect of Section~\ref{sec:pool} seen from the other side: when the pool spans failing and competent methods the ranking is meaningful and stable; when it is narrow, the ranking is noise. Table~\ref{tab:12} compares the two datasets.
+
+One preprocessing detail proved to matter more than expected, and we report it because it affects any product assembled from L2A. Converting with the baseline offset of Section~\ref{sec:data} rather than by a plain division by 10000 changes the retrieved LAI on the same patches from 0.06--0.15 to 0.9--2.0, because the $+0.10$ offset does not cancel in a spectral retrieval. The uncorrected conversion gives the same signs for every correlation in this section but different magnitudes; all numbers here are computed on the corrected data.
+
+Two limitations must be stated with this table. First, no method reaches 25 dB on this dataset (the highest is 23.44 dB, from mean filling), so an absolute threshold cannot define a qualified subset. Under the relative scheme of taking the top $K$ ($K=4,5,6$), SSIM is the weakest of the six metrics at $K=5$ and $K=6$ on the main dataset and ties with PSNR at $K=4$; on the reproduction dataset the order changes again and PSNR becomes the weakest. We therefore claim that the sign of every correlation transfers, not that the identity of the best or the worst metric does. Second, the learning models transfer poorly: dsen2cr\_opt falls from 31.38 dB on the main dataset to 23.14 dB here, and unet\_opt from 30.41 to 19.50 dB. The cause is domain shift---training on L1C top-of-atmosphere reflectance at 10 m, testing on L2A surface reflectance at 20 m---and it means that self-trained models cannot be compared across datasets without retraining. Fig.~\ref{fig:7} shows the error distribution of a failure case, and Fig.~\ref{fig:8} gives a visual comparison of typical reconstructions.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{fig7.png}
+\caption{Failure case: error distribution of the best-performing method on the hardest patch.\label{fig:7}}
+\end{figure*}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{fig8.png}
+\caption{Comparison of typical reconstruction results: cloudy input with the cloud mask outlined, cloud-free reference, and the outputs of three non-learning methods.\label{fig:8}}
+\end{figure*}
+
+\subsection{Propagation to an Operational LAI Product}\label{sec:prodval}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.50\textwidth]{fig9.png}
+\caption{LAI retrieved on the cloud-masked pixels against MCD15A3H LAI, one point per patch and method; the dotted line is the 1:1 line and the value in parentheses in the legend is the cloud-pixel RMSE of Table~\ref{tab:prodval}.\label{fig:9}}
+\end{figure*}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.86\textwidth]{fig10.png}
+\caption{Product-level bias against MODIS LAI as a function of patch cloud fraction (mean and standard deviation over the patches in each 20\% bin, five bins). The interpolation family drifts with cloud cover; the learned models do not.\label{fig:10}}
+\end{figure*}
+
+Every comparison so far uses a reference derived from the same PROSAIL family that the retriever was built on. It could be objected that the ranking is a property of the simulator. Products of this kind are themselves accepted through dedicated validation exercises \cite{ref46,ref47}, which is what makes them usable as an independent reference here. We therefore repeat the test against an operational product with an independent retrieval chain: MODIS MCD15A3H Collection 6.1 \cite{ref43,ref44}, LAI at 500 m on a 4-day compositing grid, produced by radiative transfer inversion of seven MODIS bands and sharing no data with our Sentinel-2 retrieval. For each of the 156 patches we take the $3\times3$ MODIS pixels around the patch centroid (median six valid pixels after screening: main-algorithm retrieval per the MODLAND bit, no cirrus or snow/ice flag). A composite is matched to a Sentinel-2 acquisition when the acquisition falls inside the compositing window, $0 \le t_{S2}-t_{\mathrm{start}} < 4$ days; this yields five acquisition dates, six tile--date groups and 104 granules between 18 May and 28 August 2022.
+
+The comparison is read in three ways. \emph{Cloud-pixel}: LAI retrieved from the reconstructed image on the masked pixels, which is what a user of a gap-filled product actually receives. \emph{Whole-patch}: the same over the full patch, cloud and clear together, that is, the absolute accuracy of the delivered product. \emph{Break}: the deviation of the reconstructed LAI from the seasonal baseline fitted to the clear-sky LAI of the same tile, that is, whether the reconstruction distorts the temporal signal rather than the instantaneous value. Because the retrieval is not calibrated to MODIS, a systematic offset remains (median $-0.40$ LAI over the whole patch and $-0.59$ LAI on the cloud-masked pixels), so we report it rather than tune it away. Removing it leaves the head of the ranking unchanged---the learned model first and the interpolation baselines behind it---but it does move the ends: unet\_opt and zero\_fill exchange the last two places on the cloud-masked pixels, and unet\_opt falls from second to eighth over the whole patch, because it is the only method with a positive bias. What is tested below is therefore relative, not absolute, calibration.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.05}
+\caption{Image-Domain Metrics and Product Error against MODIS LAI, Sorted by Product Error\label{tab:prodval}}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.86in}>{\centering\arraybackslash}p{0.62in}>{\centering\arraybackslash}p{0.62in}>{\centering\arraybackslash}p{0.62in}>{\centering\arraybackslash}p{0.34in}@{}}
+\hline
+\textbf{Method} & \textbf{PSNR (rank)} & \textbf{SAM (rank)} & \textbf{RMSE (rank)} & \textbf{$R^{2}$} \\
+\hline
+dsen2cr\_opt & 23.14 (3) & 14.06 (7) & 0.851 (1) & 0.539 \\
+mean\_fill & 23.44 (1) & 10.27 (3) & 1.126 (2) & 0.362 \\
+blur\_fill & 23.40 (2) & 10.22 (2) & 1.139 (3) & 0.357 \\
+hist\_match & 21.13 (4) & 10.17 (1) & 1.153 (4) & 0.302 \\
+knn\_spatial & 20.95 (5) & 11.40 (4) & 1.209 (5) & 0.313 \\
+nearest\_fill & 20.52 (7) & 11.93 (6) & 1.211 (6) & 0.308 \\
+inpaint\_telea & 20.87 (6) & 11.59 (5) & 1.238 (7) & 0.304 \\
+unet\_opt & 19.50 (8) & 15.14 (8) & 1.617 (8) & 0.334 \\
+zero\_fill & 12.78 (9) & 90.00 (9) & 2.327 (9) & 0.104 \\
+\hline
+\end{tabular}
+\par\vspace{2pt}
+\parbox{\columnwidth}{\footnotesize Note: PSNR in dB, SAM in degrees. RMSE is the root mean squared error of LAI retrieved on the cloud-masked pixels against MCD15A3H, in LAI units, before the offset correction discussed in the text. Ranks are within this table (1 = best). $R^{2}$ is computed over the pooled patch sample of that method.\par}
+\end{table}
+
+Table~\ref{tab:prodval} lists the methods in order of product error, and the two orderings come apart immediately. The learned model is first (RMSE 0.851 LAI, $R^2$ 0.539) but third by PSNR and seventh by SAM; mean filling has the highest PSNR of the nine (23.44 dB) and a product error 32\% larger; histogram matching has the best SAM (10.17$^{\circ}$) and ranks fourth. This is not an artifact of averaging over patches: PSNR prefers mean filling on 52.6\% of individual patches, while product error prefers the learned model on 66.7\% of them. Fig.~\ref{fig:9} shows the underlying scatter for all nine methods; nearly every point lies below the 1:1 line, which is the offset just described, and the differences between methods are differences in how far below the line they sit and how widely they scatter around that level rather than in the center of the cloud.
+
+Rank correlations against product error are PSNR $-0.933$ (95\% bootstrap CI $[-0.97,-0.75]$), SSIM $-0.867$ $[-0.93,-0.72]$, ERGAS $+0.817$ $[0.67,0.87]$ and SAM $+0.567$ $[0.40,0.62]$; all four intervals exclude zero, so every metric carries some information about the product. What changes is their order. SAM, the best of the four among qualified methods on the main dataset (0.933), is last here; PSNR, second there, is first. The PSNR and SSIM intervals overlap almost completely, so their difference cannot be resolved at nine methods, whereas the interval for SAM is disjoint from both: the loss of SAM is the one change that is statistically separable from resampling noise. This is the product-level form of the task dependence reported in Section~\ref{sec:task}, and it is the strongest evidence in this paper for the central claim: even the ordering \emph{between} metrics is a property of the target, so no metric can be certified as the acceptance criterion in the abstract.
+
+Two cautions belong with these numbers. First, the reference is itself uncertain. The within-composite standard deviation of MODIS LAI at the patch footprint is 0.27 LAI at the median (mean 0.38, 90th percentile 0.70), against a spread of 1.476 between the best and the worst method, a ratio of 5.5 to the median deviation and 3.9 to the mean. The between-method signal therefore exceeds the noise of the reference, but the ratio is an upper bound on confidence: the within-composite standard deviation understates the true error of a 500 m product over heterogeneous cropland, which validation studies place at 0.5--1.0 LAI \cite{ref43}. The ordering is credible; differences in RMSE below about 0.2 LAI are not.
+
+Second, the bias is regime dependent (Fig.~\ref{fig:10}). Zero filling drifts from $-0.5$ LAI where cloud fraction is below 20\% to $-2.1$ where it exceeds 80\% ($r=-0.57$ against cloud fraction), and every interpolation baseline shows a weaker version of the same trend ($r\approx-0.33$). Only the learned models are free of it: dsen2cr\_opt stays at $-0.15$ and unet\_opt, the only method with a positive bias, at $+0.17$. For a product chain this trend matters more than the mean bias, because it ties the error to a cloud regime that the user cannot see in the delivered raster.
+
+A last check uses the tile as the unit of support, which is how an LAI product is actually delivered: LAI is averaged over the patches of one tile--date and then compared with MODIS. On six tile--dates the order changes once more. dsen2cr\_opt remains first (RMSE 0.578), but unet\_opt moves from eighth at patch level to second (0.750), ahead of histogram matching (0.852) and mean filling (0.871); zero filling stays last (1.396). Averaging over a tile suppresses the high-frequency part of the error, and the learned model, whose error is spatially correlated rather than white, gains most from it. With six units the comparison is indicative only, but it repeats in the product domain the aggregation-scheme dependence that Section~\ref{sec:agg} established in the image domain: the ranking of methods is a property of the support as much as of the method.
+
+\section{Discussion}
+
+\subsection{Why PSNR Is Overestimated}
+
+PSNR is an equal-weight average of the per-band MSE of (1), but the per-band errors themselves scale with reflectance magnitude, and reflectance magnitude is not proportional to ecological information content. The near-infrared and shortwave-infrared bands have high reflectance, so their absolute errors are naturally large and dominate the global MSE. Yet the information carried by these bands plays a role different from that of the visible--red-edge region in retrieval. For LAI, the red edge and shortwave infrared determine the identifiability of the solution, and PSNR happens to suppress their importance. This explains three things: why PSNR performs well when severely failing methods are included, why it fails among qualified methods, and why its behavior changes again when the downstream task changes. One part of this account is mechanical and has to be separated from the physical part: because the qualified pool is defined on PSNR, the coefficient measured there is attenuated by the halving of the PSNR range, and after the correction of Section~\ref{sec:agg} it is no lower than SAM's. The band-level argument explains why PSNR cannot resolve differences among good methods; it does not license the claim that SAM is the better criterion, and we do not make that claim.
+
+Earlier work did not argue for abandoning MSE; it argued against replacing it without justification \cite{ref3}. Our conclusions are compatible with this. PSNR is effective at screening out poor methods; the problem lies in using it to rank good ones. The trade-off between distortion and perceptual quality has been proven \cite{ref33}, and the spectral angle metric was proposed precisely to compensate for PSNR's neglect of spectral shape \cite{ref9}.
+
+\subsection{Why SSIM Is Especially Unsuitable}
+
+SSIM is designed to mimic human perception of luminance, contrast, and structure. It is computed window by window on single-band images and then averaged. Applying it to multispectral reconstruction produces two structural problems. The first is band mismatch. SSIM is relatively tolerant of a uniform shift in overall brightness, yet spectral shift is the most common form of cloud-removal residual, so this type of error leaves almost no trace in SSIM. The second is per-band averaging. The structural similarities of different bands are averaged with equal weights, again misaligning with the differential band dependence of retrieval. Together, these keep SSIM at the bottom on every scheme and every task of the main dataset (0.800 among qualified methods, 0.833 in NDVI classification). On the reproduction dataset it rises to 0.900, second only to PSNR; but seven of the nine methods there are near-tied within 0.1 LAI of retrieval error (Section~\ref{sec:cross}), so the number says more about the pool than about the metric. We read the two results together as further evidence for the thesis of this paper rather than against it: a discriminative power that moves by 0.10 for SSIM and by 0.28 for SAM between two datasets cannot be the fixed quantity an acceptance protocol needs. ERGAS is unstable for a different reason. It uses the band mean as its normalization basis. In cloudy regions---a low-reflectance, high-contrast scene---the denominator $\mu_b$ is globally depressed, so the error is amplified and re-normalized, distorting the ranking.
+
+The SSIM family itself is evolving, from single-scale \cite{ref27} to multi-scale \cite{ref34}, and along the two alternative routes of information fidelity \cite{ref35} and feature similarity \cite{ref36}. All of them presuppose full-reference fidelity. Deep feature metrics further show that PSNR and SSIM are shallow functions that cannot capture perceptual detail \cite{ref4}. In generative reconstruction, the optima of distortion and perception are not achieved simultaneously \cite{ref33}.
+
+\subsection{Common Implications of the Three Tasks}
+
+The three tasks yield a consistent and somewhat uncomfortable conclusion. No optimal metric can transfer across tasks. For LAI, SAM and RMSE are complementary. For Cab, ERGAS dominates and the PSNR weight goes to zero. For NDVI classification, MAE reaches perfect rank agreement at the method level, while SAM leads by a wide margin at the patch level. The practical implication is that evaluation metrics cannot follow convention; they must be derived from the task. Once the task changes, both the metrics and the weights must be redone. SSIM and ERGAS are rejected in all three tasks. Therefore, abandoning these two metrics is a robust recommendation that transfers across tasks.
+
+This aligns with the recent downstream-task-aware evaluation view \cite{ref10}. The difference is that this paper gives quantitative evidence across 15 methods, three aggregation schemes, and two task mechanisms, rather than isolated examples on a single task.
+
+\subsection{From Evaluation Practice to Acceptance Criteria}
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.05}
+\caption{A Checklist for Accepting the Cloud-Removal Step of a Biophysical Product Chain, Derived from Our Results\label{tab:13}}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}>{\centering\arraybackslash}p{0.18in}>{\raggedright\arraybackslash}p{1.28in}>{\raggedright\arraybackslash}p{1.55in}@{}}
+\hline
+\textbf{No.} & \textbf{Recommendation} & \textbf{Basis in this paper} \\
+\hline
+1 & Do not accept a cloud-removal model on SSIM or ERGAS alone. & At the patch level, $\rho$ is 0.56 and 0.57, respectively, and 0.76 for PSNR. SAM is higher than the two by 0.16 and 0.15 with probability 1.000, unchanged across the three tasks. \\
+2 & Report PSNR and SAM together in the quality assessment of the cloud-removal step; neither replaces the other. & PSNR is slightly higher on the full set (0.94 vs. 0.93), while SAM is higher on qualified methods (0.93 vs. 0.87). SAM leads by 0.16 in NDVI classification. \\
+3 & State the aggregation scheme (per patch or per method) in the product's quality documentation. & The same data give opposite rankings under the two schemes. \\
+4 & Report the cloud-type composition, especially the cirrus fraction, because acceptance thresholds are regime dependent. & In cirrus scenes, SAM 0.78$\rightarrow$0.49, PSNR 0.82$\rightarrow$0.62, SSIM 0.61$\rightarrow$0.35. \\
+5 & Derive the acceptance metric from the target product, and re-derive it when the product changes. & LAI$\rightarrow$Cab changes the best metric from SAM to ERGAS/PSNR, and the fitted PSNR weight goes to zero. \\
+6 & State the sensitivity of the acceptance decision to candidate-pool composition. & Restricting the pool from all 15 methods to the nine qualified ones changes method-level SAM from 0.925 to 0.964; the direction is unchanged but the values move noticeably. \\
+7 & Report SAM and the cirrus fraction jointly, so that the loss of discrimination under cirrus stays traceable for a downstream user. & SAM falls from 0.78 to 0.49 in cirrus scenes; a user who receives only a pooled score cannot know which regime it came from. \\
+8 & Validate the acceptance metric against at least one operational product, and re-validate when the product changes. & Against MODIS LAI, SAM drops from 0.933 to 0.567 while PSNR rises from 0.867 to 0.933, and the best-PSNR method has a product error 32\% larger than the best method; the order among metrics itself moves. \\
+\hline
+\end{tabular}
+\end{table}
+
+The checklist addresses a product chain first and a paper second. For product acceptance, the decision rule is not interchangeable across targets (item 5), the accept/reject threshold depends on the cloud regime (item 4), and a pooled image-domain score cannot tell a user how much of it came from cirrus (item 7); and because the order among metrics moves once the check is made against an operational product (item 8), an acceptance protocol that reports SAM together with the cirrus fraction, and states which product it was validated against, is the minimum that keeps the decision auditable. For paper writing, items 2, 3, and 6 still apply: a method table should not list only PSNR, and no metric should be called more reliable without stating the scheme and the candidate pool. The checklist is given in Table~\ref{tab:13}.
+
+On metric selection, the discussion in fusion-quality evaluation that there is no reliable evaluation without a reference truth can be borrowed directly \cite{ref37}. When a high-resolution reference is missing, the ranking of any full-reference metric should be read cautiously \cite{ref28,ref6}. On reporting norms, we recommend giving the scheme, the candidate pool, and the uncertainty together, and releasing the code and weights to ensure reproducibility \cite{ref38}.
+
+\subsection{Limitations}\label{sec:limits}
+
+This paper has six limitations. First, only 9 of the 15 methods are qualified, which is too few samples for method-level inference. We mitigate this with patch-level bootstrap and task-consistency modeling, but statistical inference at the method level remains limited. Second, the first two downstream tasks both come from the same PROSAIL lookup table. Although the third task (NDVI classification) differs in error mechanism, and the LAI task is additionally checked against MODIS, Cab has no operational product at this resolution against which the test could be repeated. Third, the reproduction dataset contains no SAR, and its learning models degrade severely due to domain shift. It therefore supports only cross-dataset conclusions at the non-learning-method level. Fourth, cloud type, cloud thickness, and land surface type are all proxy variables (B10 band, cloudy-region brightness, NDVI), not cloud classification products or true cloud optical thickness. Fifth, the generative family contains only one small model, so our results are insufficient to generalize about generative cloud-removal methods. Sixth, the end-to-end check against an operational product covers one region, one sensor and one year: MCD15A3H at 500 m over northern China in 2022, where the uncertainty of the reference itself (0.27 LAI within-composite standard deviation, and 0.5--1.0 LAI against field measurements) is of the same order as the differences between the middle methods of Table~\ref{tab:prodval}. What that check establishes is the instability of the metric ordering and the sizeable gap at the top of the table; resolving the middle would require a Copernicus LAI product at 300 m or a field campaign, and is left to future work.
+
+Three further limitations concern the design rather than the analysis. The 428 patches belong to two scenes, so the number of independent units is two rather than 428; we report within-scene replication in Section~\ref{sec:agg} instead of a cluster bootstrap, and the patch-level intervals are lower bounds. The lookup table uses a single configuration: leaf structure and geometry are fixed so that LAI stays identifiable, and the band-importance profile of Section~\ref{sec:mech} is conditional on that choice, which we did not vary. Finally, the 20 m bands reach the 10 m grid by bilinear interpolation and the NDVI thresholds are the conventional 0.20 and 0.50; neither was subjected to a sensitivity test, although both act on all methods alike and should therefore move levels rather than the ordering.
+
+In addition, the cloud mask comes from a single algorithm, and different cloud detection algorithms already give systematically different masks \cite{ref39,ref40}. Existing benchmarks note that a lack of consensus on reference data hinders comparison \cite{ref41}, and the field has long lacked a unified benchmark \cite{ref42}. Although the impact of the mask assumption is quantified here, its relationship with cloud-thickness distribution is not yet explored \cite{ref31}.
+
+\section{Conclusion}
+
+Image-domain metrics cannot serve as interchangeable acceptance criteria for the cloud-removal step that feeds a biophysical product. Our results indicate that SSIM and ERGAS should be retired from model selection: SSIM ranks last under every scheme and ERGAS never leads (0.800 and 0.883 among qualified methods, against 0.933 for SAM), and both shift by 0.10 and 0.20 as soon as the dataset changes, so neither a fixed threshold nor a fixed rank can be attached to either of them. PSNR and SAM both have merit, but they measure different aspects, and their ranking depends on the aggregation scheme, the candidate-pool composition, and the downstream task. The root cause lies at the band level. Pixel metrics average over bands weighted by reflectance magnitude, while a task is governed by only a few bands with high spectral information content; the correlation between the two profiles is only 0.06. Checked end to end against MODIS LAI, the PSNR leader is not the product leader---its product error is 32\% larger than that of a method two places below it in the PSNR ranking, and four places below it by SAM---and the order between PSNR and SAM reverses, so even the choice of which metric to trust must be re-established for each product rather than imported from image-quality practice. The corollary for readers of the literature is direct: a leaderboard sorted by PSNR or SSIM is not a ranking of product usability, and the two can disagree by several places. Cloud-removal evaluation should reflect this structure: state the aggregation scheme, state the cloud composition, and state against which downstream task the metrics are validated.
+
+Future work has four directions. First, introduce downstream tasks with more distinct mechanisms, such as change detection or semantic segmentation, to further test task dependence. Second, expand the qualified methods from 9 to more than 15 to obtain method-level comparisons with statistical power. Third, repeat this analysis at the original 256-pixel resolution to test whether spatial scale affects the conclusions. Fourth, repeat the product-level check with a finer reference---a 300 m Copernicus LAI product or a field campaign---to resolve the middle of Table~\ref{tab:prodval}, which the 500 m MODIS reference cannot separate.
+%% cas-dc stores each \credit{} in a sequence and prints nothing until \printcredits
+%% is called; Elsevier places this block before the declaration statements.
+\printcredits
+
+\section*{Declaration of competing interest}
+
+The authors declare that they have no known competing financial interests or personal
+relationships that could have appeared to influence the work reported in this paper.
+
+\section*{Data availability}
+
+The derived patch-level tables, the retrieval and evaluation code, and the scripts that
+reproduce every table and figure in this paper are archived at
+\url{https://doi.org/10.5281/zenodo.24070784} (MIT License for the code, CC BY 4.0 for
+the derived tables). The input imagery is publicly available: SEN12MS-CR from its
+published archive, Sentinel-2 L2A from the Copernicus Data Space Ecosystem, and
+MCD15A3H from the NASA LP DAAC.
+
+
+\begin{thebibliography}{44}
+\bibitem{ref1} P. Ebel, Y. Xu, M. Schmitt, and X. X. Zhu, ``SEN12MS-CR-TS: A remote-sensing data set for multimodal multitemporal cloud removal,'' \textit{IEEE Trans. Geosci. Remote Sens.}, vol. 60, Art. no. 5222414, 2022, doi: 10.1109/TGRS.2022.3146246.
+\bibitem{ref2} X. X. Zhu et al., ``Deep learning in remote sensing: A comprehensive review and list of resources,'' \textit{IEEE Geosci. Remote Sens. Mag.}, vol. 5, no. 4, pp. 8--36, 2017, doi: 10.1109/MGRS.2017.2762307.
+\bibitem{ref3} Z. Wang and A. C. Bovik, ``Mean squared error: Love it or leave it? A new look at signal fidelity measures,'' \textit{IEEE Signal Process. Mag.}, vol. 26, no. 1, pp. 98--117, 2009, doi: 10.1109/MSP.2008.930649.
+\bibitem{ref4} R. Zhang, P. Isola, A. A. Efros, E. Shechtman, and O. Wang, ``The unreasonable effectiveness of deep features as a perceptual metric,'' in \textit{Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)}, Salt Lake City, UT, USA, 2018, pp. 586--595, doi: 10.1109/CVPR.2018.00068.
+\bibitem{ref5} J. Wu, X. Li, and X. Hao, ``A review of full resolution quality assessment for multispectral pansharpening,'' in \textit{Proc. 10th Int. Conf. Inf. Syst. Comput. Technol. (ISCTech)}, Guilin, China, 2022, pp. 35--42, doi: 10.1109/ISCTech58360.2022.00012.
+\bibitem{ref6} G. Vivone et al., ``A critical comparison among pansharpening algorithms,'' \textit{IEEE Trans. Geosci. Remote Sens.}, vol. 53, no. 5, pp. 2565--2586, 2015, doi: 10.1109/TGRS.2014.2361734.
+\bibitem{ref7} X. Zou et al., ``DiffCR: A fast conditional diffusion framework for cloud removal from optical satellite images,'' \textit{IEEE Trans. Geosci. Remote Sens.}, vol. 62, Art. no. 5612014, 2024, doi: 10.1109/TGRS.2024.3365806.
+\bibitem{ref8} W. Zhang, J. Mei, and Y. Wang, ``DMDiff: A dual-branch multimodal conditional guided diffusion model for cloud removal through SAR-optical data fusion,'' \textit{Remote Sens.}, vol. 17, no. 6, Art. no. 965, 2025, doi: 10.3390/rs17060965.
+\bibitem{ref9} F. A. Kruse et al., ``The spectral image processing system (SIPS)---Interactive visualization and analysis of imaging spectrometer data,'' \textit{Remote Sens. Environ.}, vol. 44, no. 2--3, pp. 145--163, 1993, doi: 10.1016/0034-4257(93)90013-N.
+\bibitem{ref10} Z. Wang, X. Ma, and M. O. Pun, ``Downstream task-aware cloud removal for very-high-resolution remote sensing images: An information loss perspective,'' \textit{IEEE J. Sel. Topics Appl. Earth Observ. Remote Sens.}, vol. 18, pp. 24531--24545, 2025, doi: 10.1109/JSTARS.2025.3610641.
+\bibitem{ref11} H. Zhang, W. Ma, and A. C. Frery, ``Statistical analysis of performance metrics for cloud removal,'' in \textit{Proc. IEEE Int. Geosci. Remote Sens. Symp. (IGARSS)}, Brisbane, Australia, 2025, pp. 1752--1756, doi: 10.1109/IGARSS55030.2025.11243618.
+\bibitem{ref12} M. Schmitt, L. H. Hughes, C. Qiu, and X. X. Zhu, ``SEN12MS -- A curated dataset of georeferenced multi-spectral Sentinel-1/2 imagery for deep learning and data fusion,'' \textit{ISPRS Ann. Photogramm. Remote Sens. Spatial Inf. Sci.}, vol. IV-2/W7, pp. 153--160, 2019, doi: 10.5194/isprs-annals-iv-2-w7-153-2019.
+\bibitem{ref13} A. Meraner, P. Ebel, X. X. Zhu, and M. Schmitt, ``Cloud removal in Sentinel-2 imagery using a deep residual neural network and SAR-optical data fusion,'' \textit{ISPRS J. Photogramm. Remote Sens.}, vol. 166, pp. 333--346, 2020, doi: 10.1016/j.isprsjprs.2020.05.013.
+\bibitem{ref14} P. Singh and N. Komodakis, ``Cloud-GAN: Cloud removal for Sentinel-2 imagery using a cyclic consistent generative adversarial networks,'' in \textit{Proc. IEEE Int. Geosci. Remote Sens. Symp. (IGARSS)}, Valencia, Spain, 2018, pp. 1772--1775, doi: 10.1109/IGARSS.2018.8519033.
+\bibitem{ref15} P. Ebel, M. Schmitt, and X. X. Zhu, ``Cloud removal in unpaired Sentinel-2 imagery using cycle-consistent GAN and SAR-optical data fusion,'' in \textit{Proc. IEEE Int. Geosci. Remote Sens. Symp. (IGARSS)}, Waikoloa, HI, USA, 2020, pp. 2065--2068, doi: 10.1109/IGARSS39084.2020.9324060.
+\bibitem{ref16} G. L. Huang and P. Y. Wu, ``CTGAN: Cloud transformer generative adversarial network,'' in \textit{Proc. IEEE Int. Conf. Image Process. (ICIP)}, Bordeaux, France, 2022, pp. 511--515, doi: 10.1109/ICIP46576.2022.9897229.
+\bibitem{ref17} L. Pan, X. Song, F. Xie, X. Zhang, H. Ji, and Z. Shi, ``M\textsuperscript{3}-CR: Multiscale Multibranch Mamba for SAR-assisted optical image thick cloud removal,'' \textit{IEEE Trans. Geosci. Remote Sens.}, vol. 63, Art. no. 5623312, 2025, doi: 10.1109/TGRS.2025.3566088.
+\bibitem{ref18} J. Jia et al., ``GLTF-Net: Deep-learning network for thick cloud removal of remote sensing images via global--local temporality and features,'' \textit{Remote Sens.}, vol. 15, no. 21, Art. no. 5145, 2023, doi: 10.3390/rs15215145.
+\bibitem{ref19} J. Chen, X. Tong, Y. Sun, and Z. Xiao, ``Cloud removal method for remote sensing images based on SAR-guided conditional diffusion model and style adaptation,'' \textit{IEEE J. Sel. Topics Appl. Earth Observ. Remote Sens.}, vol. 18, pp. 22770--22783, 2025, doi: 10.1109/JSTARS.2025.3599162.
+\bibitem{ref20} C. Stucker, V. S. F. Garnot, and K. Schindler, ``U-TILISE: A sequence-to-sequence model for cloud removal in optical satellite time series,'' \textit{IEEE Trans. Geosci. Remote Sens.}, vol. 61, Art. no. 5408716, 2023, doi: 10.1109/TGRS.2023.3333391.
+\bibitem{ref21} J. Gao, Q. Yuan, J. Li, H. Zhang, and X. Su, ``Cloud removal with fusion of high resolution optical and SAR images using generative adversarial networks,'' \textit{Remote Sens.}, vol. 12, no. 1, Art. no. 191, 2020, doi: 10.3390/rs12010191.
+\bibitem{ref22} H. Fang, F. Baret, S. Plummer, and G. Schaepman-Strub, ``An overview of global leaf area index (LAI): Methods, products, validation, and applications,'' \textit{Rev. Geophys.}, vol. 57, no. 3, pp. 739--799, 2019, doi: 10.1029/2018RG000608.
+\bibitem{ref23} J. Verrelst et al., ``Optical remote sensing and the retrieval of terrestrial vegetation bio-geophysical properties -- A review,'' \textit{ISPRS J. Photogramm. Remote Sens.}, vol. 108, pp. 273--290, 2015, doi: 10.1016/j.isprsjprs.2015.05.005.
+\bibitem{ref24} J. Verrelst et al., ``Quantifying vegetation biophysical variables from imaging spectroscopy data: A review on retrieval methods,'' \textit{Surveys Geophys.}, vol. 40, no. 3, pp. 589--629, 2019, doi: 10.1007/s10712-018-9478-y.
+\bibitem{ref25} Z. Wang et al., ``Deep learning-based cloud detection for optical remote sensing images: A survey,'' \textit{Remote Sens.}, vol. 16, no. 23, Art. no. 4583, 2024, doi: 10.3390/rs16234583.
+\bibitem{ref26} P. Ebel, V. S. F. Garnot, M. Schmitt, J. D. Wegner, and X. X. Zhu, ``UnCRtainTS: Uncertainty quantification for cloud removal in optical satellite time series,'' in \textit{Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. Workshops (CVPRW)}, Vancouver, BC, Canada, 2023, pp. 2086--2096, doi: 10.1109/CVPRW59228.2023.00202.
+\bibitem{ref27} Z. Wang, A. C. Bovik, H. R. Sheikh, and E. P. Simoncelli, ``Image quality assessment: From error visibility to structural similarity,'' \textit{IEEE Trans. Image Process.}, vol. 13, no. 4, pp. 600--612, 2004, doi: 10.1109/TIP.2003.819861.
+\bibitem{ref28} L. Alparone, L. Wald, J. Chanussot, C. Thomas, P. Gamba, and L. M. Bruce, ``Comparison of pansharpening algorithms: Outcome of the 2006 GRS-S data-fusion contest,'' \textit{IEEE Trans. Geosci. Remote Sens.}, vol. 45, no. 10, pp. 3012--3021, 2007, doi: 10.1109/TGRS.2007.904923.
+\bibitem{ref29} S. Jacquemoud et al., ``PROSPECT+SAIL models: A review of use for vegetation characterization,'' \textit{Remote Sens. Environ.}, vol. 113, pp. S56--S66, 2009, doi: 10.1016/j.rse.2008.01.026.
+\bibitem{ref30} B. Combal et al., ``Retrieval of canopy biophysical variables from bidirectional reflectance: Using prior information to solve the ill-posed inverse problem,'' \textit{Remote Sens. Environ.}, vol. 84, no. 1, pp. 1--15, 2003, doi: 10.1016/S0034-4257(02)00035-4.
+\bibitem{ref31} Y. Zhou, H. Tang, X. Jiang, G. Wang, and S. Xiang, ``GUANet: Gaussian Uncertainty-Aware Network for Cloud Removal of Spaceborne Optical Images,'' \textit{IEEE Geosci. Remote Sens. Lett.}, vol. 22, Art. no. 6013705, 2025, doi: 10.1109/LGRS.2025.3614988.
+\bibitem{ref32} Z. Wang and A. C. Bovik, ``A universal image quality index,'' \textit{IEEE Signal Process. Lett.}, vol. 9, no. 3, pp. 81--84, 2002, doi: 10.1109/97.995823.
+\bibitem{ref33} Y. Blau and T. Michaeli, ``The perception-distortion tradeoff,'' in \textit{Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)}, Salt Lake City, UT, USA, 2018, pp. 6228--6237, doi: 10.1109/CVPR.2018.00652.
+\bibitem{ref34} Z. Wang, E. P. Simoncelli, and A. C. Bovik, ``Multiscale structural similarity for image quality assessment,'' in \textit{Proc. 37th Asilomar Conf. Signals, Syst. Comput.}, Pacific Grove, CA, USA, 2003, pp. 1398--1402, doi: 10.1109/ACSSC.2003.1292216.
+\bibitem{ref35} H. R. Sheikh and A. C. Bovik, ``Image information and visual quality,'' \textit{IEEE Trans. Image Process.}, vol. 15, no. 2, pp. 430--444, 2006, doi: 10.1109/TIP.2005.859378.
+\bibitem{ref36} L. Zhang, L. Zhang, X. Mou, and D. Zhang, ``FSIM: A feature similarity index for image quality assessment,'' \textit{IEEE Trans. Image Process.}, vol. 20, no. 8, pp. 2378--2386, 2011, doi: 10.1109/TIP.2011.2109730.
+\bibitem{ref37} G. Scarpa and M. Ciotola, ``Full-resolution quality assessment for pansharpening,'' \textit{Remote Sens.}, vol. 14, no. 8, Art. no. 1808, 2022, doi: 10.3390/rs14081808.
+\bibitem{ref38} T. Balz and F. Rocca, ``Reproducibility and replicability in SAR remote sensing,'' \textit{IEEE J. Sel. Topics Appl. Earth Observ. Remote Sens.}, vol. 13, pp. 3834--3843, 2020, doi: 10.1109/JSTARS.2020.3005912.
+\bibitem{ref39} S. Qiu, Z. Zhu, and B. He, ``Fmask 4.0: Improved cloud and cloud shadow detection in Landsats 4--8 and Sentinel-2 imagery,'' \textit{Remote Sens. Environ.}, vol. 231, Art. no. 111205, 2019, doi: 10.1016/j.rse.2019.05.024.
+\bibitem{ref40} S. Foga et al., ``Cloud detection algorithm comparison and validation for operational Landsat data products,'' \textit{Remote Sens. Environ.}, vol. 194, pp. 379--390, 2017, doi: 10.1016/j.rse.2017.03.026.
+\bibitem{ref41} C. Aybar et al., ``CloudSEN12, a global dataset for semantic understanding of cloud and cloud shadow in Sentinel-2,'' \textit{Sci. Data}, vol. 9, no. 1, Art. no. 782, 2022, doi: 10.1038/s41597-022-01878-2.
+\bibitem{ref42} H. Zhou, C. H. Kao, C. P. Pho, U. Mall, B. Hariharan, and K. Bala, ``AllClear: A comprehensive dataset and benchmark for cloud removal in satellite imagery,'' in \textit{Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)}, vol. 37, Vancouver, BC, Canada, 2024, pp. 53571--53597, doi: 10.52202/079017-1696.
+\bibitem{ref43} K. Yan, T. Park, G. Yan, Z. Liu, B. Yang, S. Chen, Y. Knyazikhin, and R. B. Myneni, ``Evaluation of MODIS LAI/FPAR product Collection 6. Part 1: Consistency and improvements,'' \textit{Remote Sens.}, vol. 8, no. 5, Art. no. 359, 2016, doi: 10.3390/rs8050359.
+\bibitem{ref44} R. B. Myneni, Y. Knyazikhin, and T. Park, ``MCD15A3H MODIS/Terra+Aqua Leaf Area Index/FPAR 4-day L4 Global 500 m SIN Grid V061,'' NASA EOSDIS Land Processes DAAC, 2021, doi: 10.5067/MODIS/MCD15A3H.061.
+\bibitem{ref45} W. R. Sackett and H. Yang, ``Correction for range restriction: An expanded typology,'' \textit{J. Appl. Psychol.}, vol. 85, no. 1, pp. 112--118, 2000, doi: 10.1037/0021-9010.85.1.112.
+\bibitem{ref46} F. Camacho, J. Cernicharo, R. Lacaze, F. Baret, and M. Weiss, ``GEOV1: LAI, FAPAR essential climate variables and FCOVER global time series capitalizing over existing products. Part 2: Validation and intercomparison with reference products,'' \textit{Remote Sens. Environ.}, vol. 137, pp. 310--329, 2013, doi: 10.1016/j.rse.2013.02.030.
+\bibitem{ref47} M. Weiss, F. Baret, T. Block, B. Koetz, A. Burini, and B. Scholze, ``On line validation exercise (OLIVE): A web based service for the validation of medium resolution land products. Application to FAPAR products,'' \textit{Remote Sens.}, vol. 6, no. 5, pp. 4190--4216, 2014, doi: 10.3390/rs6054190.
+\end{thebibliography}
+
+\end{document}

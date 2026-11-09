@@ -6,7 +6,7 @@ from pathlib import Path
 from docx import Document
 from docx.shared import Pt
 
-ROOT = Path(r"D:/mazhaoyang/code program/cloudrs1/last/_jag")
+ROOT = Path(__file__).resolve().parent
 lines = [l.strip() for l in io.open(ROOT / "highlights.txt", encoding="utf-8").read().splitlines() if l.strip()]
 assert 3 <= len(lines) <= 5, len(lines)
 for l in lines:

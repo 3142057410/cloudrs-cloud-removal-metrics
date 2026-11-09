@@ -1,0 +1,195 @@
+{
+  "n_full": 15,
+  "n_qual": 9,
+  "range_restriction": {
+    "sd_PSNR_full": 4.941,
+    "sd_PSNR_qual": 2.443,
+    "sd_SAM_full": 21.752,
+    "sd_SAM_qual": 1.507,
+    "ratio_PSNR": 0.495,
+    "ratio_SAM": 0.069,
+    "rho_PSNR_qual": -0.867,
+    "rho_SAM_qual": 0.933,
+    "rho_PSNR_corrected": -0.962,
+    "rho_SAM_corrected": 1.0
+  },
+  "pools": {
+    "full15": {
+      "n": 15,
+      "members": [
+        "blur_fill",
+        "diffusion",
+        "dsen2cr_opt",
+        "dsen2cr_sar",
+        "hist_match",
+        "inpaint_telea",
+        "knn_spatial",
+        "mean_fill",
+        "nearest_fill",
+        "sar_guided",
+        "sar_regression",
+        "uncrtaints_ft",
+        "unet_opt",
+        "unet_sar",
+        "zero_fill"
+      ],
+      "PSNR": -0.936,
+      "SSIM": -0.911,
+      "SAM": 0.925,
+      "ERGAS": 0.914,
+      "MAE": 0.915,
+      "RMSE": 0.94
+    },
+    "dLAI_le_0.6": {
+      "n": 11,
+      "members": [
+        "blur_fill",
+        "dsen2cr_opt",
+        "dsen2cr_sar",
+        "inpaint_telea",
+        "knn_spatial",
+        "mean_fill",
+        "sar_guided",
+        "sar_regression",
+        "uncrtaints_ft",
+        "unet_opt",
+        "unet_sar"
+      ],
+      "PSNR": -0.845,
+      "SSIM": -0.782,
+      "SAM": 0.891,
+      "ERGAS": 0.864,
+      "MAE": 0.866,
+      "RMSE": 0.856
+    },
+    "dLAI_le_0.5": {
+      "n": 5,
+      "members": [
+        "dsen2cr_opt",
+        "dsen2cr_sar",
+        "uncrtaints_ft",
+        "unet_opt",
+        "unet_sar"
+      ],
+      "PSNR": -0.9,
+      "SSIM": -0.7,
+      "SAM": 0.9,
+      "ERGAS": 0.9,
+      "MAE": 1.0,
+      "RMSE": 0.9
+    },
+    "learning_only": {
+      "n": 6,
+      "members": [
+        "diffusion",
+        "dsen2cr_opt",
+        "dsen2cr_sar",
+        "uncrtaints_ft",
+        "unet_opt",
+        "unet_sar"
+      ],
+      "PSNR": -0.943,
+      "SSIM": -0.829,
+      "SAM": 0.943,
+      "ERGAS": 0.943,
+      "MAE": 1.0,
+      "RMSE": 0.943
+    },
+    "nonlearning_only": {
+      "n": 9,
+      "members": [
+        "blur_fill",
+        "hist_match",
+        "inpaint_telea",
+        "knn_spatial",
+        "mean_fill",
+        "nearest_fill",
+        "sar_guided",
+        "sar_regression",
+        "zero_fill"
+      ],
+      "PSNR": -0.717,
+      "SSIM": -0.633,
+      "SAM": 0.667,
+      "ERGAS": 0.617,
+      "MAE": 0.603,
+      "RMSE": 0.736
+    }
+  },
+  "scenes": {
+    "spring_scene_31": {
+      "n_patches": 246,
+      "n_methods": 15,
+      "PSNR": -0.936,
+      "SSIM": -0.929,
+      "SAM": 0.946,
+      "ERGAS": 0.932,
+      "MAE": 0.939,
+      "RMSE": 0.936,
+      "PSNR_patch": -0.827,
+      "SSIM_patch": -0.634,
+      "SAM_patch": 0.804,
+      "ERGAS_patch": 0.726,
+      "MAE_patch": 0.8,
+      "RMSE_patch": 0.827
+    },
+    "winter_scene_63": {
+      "n_patches": 182,
+      "n_methods": 15,
+      "PSNR": -0.768,
+      "SSIM": -0.743,
+      "SAM": 0.846,
+      "ERGAS": 0.732,
+      "MAE": 0.754,
+      "RMSE": 0.768,
+      "PSNR_patch": -0.575,
+      "SSIM_patch": -0.273,
+      "SAM_patch": 0.331,
+      "ERGAS_patch": 0.235,
+      "MAE_patch": 0.492,
+      "RMSE_patch": 0.575
+    }
+  },
+  "scene_cluster_boot": {
+    "PSNR": [
+      -0.936,
+      -0.768,
+      500
+    ],
+    "SAM": [
+      0.846,
+      0.946,
+      500
+    ],
+    "SSIM": [
+      -0.929,
+      -0.743,
+      500
+    ],
+    "ERGAS": [
+      0.732,
+      0.932,
+      500
+    ]
+  },
+  "qual_by_scene": {
+    "spring_scene_31": {
+      "n_methods": 9,
+      "PSNR": -0.817,
+      "SSIM": -0.783,
+      "SAM": 0.867,
+      "ERGAS": 0.833,
+      "MAE": 0.833,
+      "RMSE": 0.817
+    },
+    "winter_scene_63": {
+      "n_methods": 9,
+      "PSNR": -0.817,
+      "SSIM": -0.783,
+      "SAM": 0.817,
+      "ERGAS": 0.967,
+      "MAE": 0.833,
+      "RMSE": 0.817
+    }
+  }
+}

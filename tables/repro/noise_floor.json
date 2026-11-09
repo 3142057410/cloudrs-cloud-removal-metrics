@@ -1,0 +1,20 @@
+{
+  "n_patches": 428,
+  "pixels_per_subsample": 300,
+  "multiplicative_noise_sigma": 0.02,
+  "split_half": {
+    "mean": 0.6289,
+    "median": 0.4425,
+    "p90": 1.3038,
+    "max": 3.1188
+  },
+  "radiometric": {
+    "mean": 0.0385,
+    "median": 0.0356,
+    "p90": 0.0532,
+    "max": 0.1868
+  },
+  "frac_split_above_best_method": 0.5491,
+  "frac_radiometric_above_best_method": 0.0,
+  "frac_split_above_median_method": 0.4089
+}

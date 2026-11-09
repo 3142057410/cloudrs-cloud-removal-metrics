@@ -18,13 +18,13 @@ LAI product (MCD15A3H).
 
 | Directory | What it holds | Size |
 |---|---|---|
-| `code/` | All processing, training and analysis scripts (47 files). Entry points are listed below. | 516 KB |
+| `code/` | All processing, training and analysis scripts (49 files). Entry points are listed below. | 532 KB |
 | `tables/main/` | Per-method and per-patch results on the main dataset (SEN12MS-CR), 37 CSV files. | 8.5 MB |
-| `tables/repro/` | Results on the independently built Sentinel-2 L2A dataset and the MODIS LAI product validation, 9 CSV + 1 JSON. | 811 KB |
+| `tables/repro/` | Results on the independently built Sentinel-2 L2A dataset, the MODIS LAI product validation, and the two revision analyses (noise floor, range restriction), 9 CSV + 3 JSON. | 836 KB |
 | `figures/` | `fig1.png` … `fig10.png`, the files actually printed as Figures 1–10. | 2.6 MB |
 | `meta/` | Patch geolocation, Sentinel-2 pair inventory, MODIS granule index. | 52 KB |
 | `configs/` | `p1.yaml`, the single configuration file every script reads. | 2 KB |
-| `paper/` | Scripts that build the manuscript and the Word version from `main.tex`. | 40 KB |
+| `paper/` | `main.tex` (the submitted LaTeX source, snapshot), `main.aux`, and the scripts that build the Word version from it. Run `pdflatex` first, then `prep_tex.py` and `style_docx.py`; `pandoc` must be on PATH. | 164 KB |
 
 **Table-to-file guide.** Each CSV header states its own columns, so any table in the
 paper can be traced from the file name:
@@ -44,8 +44,28 @@ paper can be traced from the file name:
 | Table 12 — main vs. reproduction dataset | `tables/main/corr_method_level.csv` + `tables/repro/corr_s2_crossregion.csv` |
 | Table 13 — metrics and product error against MODIS LAI | `tables/repro/product_validation_method.csv`, `product_validation_corr.csv`, `product_validation_corr_boot.csv` |
 | Table 14, Table 1 | compiled from the above; no separate source file |
+| Section 4.1 noise floor (split-half, radiometric) | `tables/repro/noise_floor.csv`, `noise_floor.json`, `code/noise_floor.py` |
+| Section 4.2 range restriction and per-scene replication | `tables/repro/truncation_stats.json`, `code/analysis_truncation.py` |
 
 ---
+
+## Revision analyses
+
+Two analyses were added during revision and can be recomputed from the archived tables:
+
+* **Noise floor** (`code/noise_floor.py`, Section 4.1). Two null comparisons on the
+  cloud-free reference alone: a split-half test (two disjoint 300-pixel samples of the
+  same patch, mean |dLAI| = 0.63, median 0.44) and a 2% multiplicative-noise test
+  (median 0.036). The second is eleven times smaller than the smallest between-method
+  difference, which is why the paired difference is not retrieval-noise limited. Needs
+  the processed patch cubes, so it runs only in a full working copy.
+* **Range restriction** (`code/analysis_truncation.py`, Section 4.2). The qualified pool
+  is defined on PSNR, so the pool halves the standard deviation of the variable it is
+  used to correlate (4.94 dB over 15 methods, 2.44 dB over 9). The Case II correction
+  moves the restricted coefficient from -0.867 to -0.962. The same script reports pools
+  defined without any image metric (dLAI <= 0.6, learning only, non-learning only) and
+  the per-scene replication that replaces a cluster bootstrap, since the 428 patches
+  come from only two scenes.
 
 ## Requirements
 

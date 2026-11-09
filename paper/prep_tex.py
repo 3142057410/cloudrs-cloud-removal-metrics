@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 """Build a pandoc-friendly LaTeX source from main.tex (cas-dc) for the Word version."""
-import io, re, subprocess, sys
+import io, os, re, subprocess, sys
 
-ROOT = r"D:/mazhaoyang/code program/cloudrs1/last/_jag"
-SRC = ROOT + "/main.tex"
-AUX = ROOT + "/main.aux"
-OUT_TEX = ROOT + "/_word/word.tex"
-OUT_DOCX = ROOT + "/_word/Elsevier_JAG_Manuscript.docx"
+# Paths are relative to this directory so that the archived copy runs as-is:
+#   pandoc must be on PATH; run from paper/ after a successful pdflatex pass.
+HERE = __import__("pathlib").Path(__file__).resolve().parent
+SRC = str(HERE / "main.tex")
+AUX = str(HERE / "main.aux")
+OUT_TEX = str(HERE / "word.tex")
+OUT_DOCX = str(HERE / "Elsevier_JAG_Manuscript.docx")
 
 src = io.open(SRC, encoding="utf-8").read()
 aux = io.open(AUX, encoding="utf-8").read()
@@ -23,7 +25,7 @@ bib_part = body[body.index(r"\begin{thebibliography}"):]
 keys = re.findall(r"\\bibitem\{([^}]+)\}", bib_part)
 keymap = {k: i + 1 for i, k in enumerate(keys)}
 print("bibitems:", len(keys))
-assert len(keys) == 44
+assert 40 <= len(keys) <= 80, len(keys)  # sanity only; the count follows the manuscript
 
 main_body = body[:body.index(r"\begin{thebibliography}")]
 
@@ -209,7 +211,8 @@ doc.append("\\end{document}")
 io.open(OUT_TEX, "w", encoding="utf-8", newline="\n").write("\n".join(doc))
 print("wrote", OUT_TEX)
 
-r = subprocess.run(["pandoc", "word.tex", "-f", "latex", "-t", "docx", "--resource-path=..",
+r = subprocess.run(["pandoc", "word.tex", "-f", "latex", "-t", "docx",
+                    "--resource-path=" + os.pathsep.join([str(HERE.parent), str(HERE.parent / "figures")]),
                     "-o", "Elsevier_JAG_Manuscript.docx"],
-                   cwd=ROOT + "/_word", capture_output=True, text=True)
+                   cwd=str(HERE), capture_output=True, text=True)
 print("pandoc rc:", r.returncode, r.stderr[:800])
