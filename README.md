@@ -19,8 +19,8 @@ LAI product (MCD15A3H).
 | Directory | What it holds | Size |
 |---|---|---|
 | `code/` | All processing, training and analysis scripts (49 files). Entry points are listed below. | 532 KB |
-| `tables/main/` | Per-method and per-patch results on the main dataset (SEN12MS-CR), 37 CSV files. | 8.5 MB |
-| `tables/repro/` | Results on the independently built Sentinel-2 L2A dataset, the MODIS LAI product validation, and the two revision analyses (noise floor, range restriction), 9 CSV + 3 JSON. | 836 KB |
+| `tables/main/` | Per-method and per-patch results on the main dataset (SEN12MS-CR), 35 CSV files. | 8.2 MB |
+| `tables/repro/` | Results on the independently built Sentinel-2 L2A dataset, the MODIS LAI product validation, and the two revision analyses (noise floor, range restriction), 9 CSV + 3 JSON. Every reproduction-dataset table lives here and only here: `corr_s2_crossregion.csv` and `per_patch_metrics_s2.csv` are computed on the baseline-offset-corrected reflectance, which is what Table 12 reports. | 836 KB |
 | `figures/` | `fig1.png` … `fig10.png`, the files actually printed as Figures 1–10. | 2.6 MB |
 | `meta/` | Patch geolocation, Sentinel-2 pair inventory, MODIS granule index. | 52 KB |
 | `configs/` | `p1.yaml`, the single configuration file every script reads. | 2 KB |
